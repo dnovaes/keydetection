@@ -1,10 +1,16 @@
-# electron-quick-start
+# keydetection
+program that detects key even if program isnt focused [temp]
 
-**Clone and run for a quick way to see Electron in action.**
+# Tested using the versions:
+
+Python 2.7 installer.exe from the website | https://www.python.org/downloads/
+NodeJs v6.11.2 installed.exe 64bits from the website | nodejs.org. comes with NPM 5.3
+npm install -g node-gyp
+
+# Install the dependencies and run
+$ npm install && npm start
 
 This is a minimal Electron application based on the [Quick Start Guide](http://electron.atom.io/docs/tutorial/quick-start) within the Electron documentation.
-
-**Use this app along with the [Electron API Demos](http://electron.atom.io/#get-started) app for API code examples to help you get started.**
 
 A basic Electron application needs just these files:
 
