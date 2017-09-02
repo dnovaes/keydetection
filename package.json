@@ -1,27 +1,31 @@
 {
-  "name": "electron-quick-start",
+  "name": "bobitosbot",
   "version": "1.0.0",
-  "description": "A minimal Electron application",
-  "main": "main.js",
-  "scripts": {
-    "start": "electron ."
-  },
-  "repository": "https://github.com/electron/electron-quick-start",
-  "keywords": [
-    "Electron",
-    "quick",
-    "start",
-    "tutorial",
-    "demo"
-  ],
-  "author": "GitHub",
-  "license": "CC0-1.0",
-  "devDependencies": {
-    "electron": "~1.6.2"
-  },
+  "description": "A companion for your PXG",
+  "main": "index.js",
   "dependencies": {
-    "and": "0.0.0",
-    "npm": "^5.3.0",
-    "start": "^5.1.0"
-  }
+    "electron": "^1.7.5"
+  },
+  "devDependencies": {
+    "electron-rebuild": "^1.6.0"
+  },
+  "scripts": {
+    "start": "electron .",
+    "install": "node-gyp rebuild"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dnovaes/keydetection.git"
+  },
+  "keywords": [
+    "bot",
+    "pxg"
+  ],
+  "author": "dnovaes",
+  "license": "CCO-1.0",
+  "gypfile": true,
+  "bugs": {
+    "url": "https://github.com/dnovaes/keydetection/issues"
+  },
+  "homepage": "https://github.com/dnovaes/keydetection#readme"
 }
