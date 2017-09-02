@@ -19,7 +19,7 @@ function createWindow () {
   }))
 
   // Open the DevTools.
-  win.webContents.openDevTools()
+  //win.webContents.openDevTools()
 
   // Emitted when the window is closed.
   win.on('closed', () => {
@@ -33,7 +33,13 @@ function createWindow () {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', createWindow)
+app.on('ready', function(err,res){
+    createWindow();
+
+    addon.registerHKF10Async(function(res){
+      console.log("F10 key detected!!");
+    });
+});
 
 console.log(process.version);
 
@@ -54,10 +60,20 @@ app.on('activate', () => {
   }
 })
 
-var f_F10 = addon.registerHotKeyF10();
-if(f_F10){
-  console.log("F10 key detected!!");
-}
-
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here
+
+//var small_mod = require("small_modules/cfunc.js");
+
+/*
+registerHKF10Callback = function(fn){
+  return function(){
+    var args = [].slice.call(arguments),
+        callback = args.pop(),
+        result = fn.apply(this, args);
+    callback(result);
+  }
+}
+
+registerHKF10Async = registerHKF10Callback(addon.registerHotKeyF10);
+*/
