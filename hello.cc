@@ -25,6 +25,7 @@ using v8::Array;
 struct Work{
   //pointer when starting worker threads
   uv_work_t request;
+  uv_async_t async;
   //stores the javascript callback function, persistent means: store in the heap
   Persistent<Function> callback;
 };
@@ -79,10 +80,15 @@ static void registerHKF10(uv_work_t *req){
     while (GetMessage(&msg, NULL, 0, 0) != 0){
       if(msg.message == WM_HOTKEY){
 
-        UnregisterHotKey(NULL, 1);
+        //UnregisterHotKey(NULL, 1);
+
+        //Communication between threads(uv_work_t and uv_async_t);
+        work->async.data = (void*) req;
+        uv_async_send(&work->async);
+
         //args.GetReturnValue().Set(Boolean::New(isolate, true));
         //std::transform(Boolean::New(isolate, true));
-        break;
+        //break;
       }
     }
   }
@@ -112,6 +118,19 @@ static void WorkAsyncComplete(uv_work_t *req, int status){
   delete work;
 }
 
+void sendSygnalHK(uv_async_t *handle) {
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+
+  uv_work_t *req = ((uv_work_t*) handle->data);
+  Work *work = static_cast<Work*> (req->data);
+
+  Local<Number> val = Number::New(isolate, 1);
+  Handle<Value> argv[] = {val};
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+}
+
 void registerHKF10Async(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
 
@@ -123,6 +142,7 @@ void registerHKF10Async(const FunctionCallbackInfo<Value>& args){
   work->callback.Reset(isolate, callback);
 
   //worker thread using libuv
+  uv_async_init(uv_default_loop(), &work->async, sendSygnalHK);
   uv_queue_work(uv_default_loop(), &work->request, registerHKF10, WorkAsyncComplete);
 
   args.GetReturnValue().Set(Undefined(isolate));
