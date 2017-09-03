@@ -79,7 +79,6 @@ static void registerHKF10(uv_work_t *req){
     while (GetMessage(&msg, NULL, 0, 0) != 0){
       if(msg.message == WM_HOTKEY){
 
-//        _tprintf(_T("WM_HOTKEY received\n"));
         UnregisterHotKey(NULL, 1);
         //args.GetReturnValue().Set(Boolean::New(isolate, true));
         //std::transform(Boolean::New(isolate, true));
@@ -100,10 +99,10 @@ static void WorkAsyncComplete(uv_work_t *req, int status){
 //  unsigned int i = 1;
 //  returnArgs->Set(i,i);
 
+  //Creates a variable of type Number which stores a value of v8::Number with value 1
+  //Local variables are just visible to this scope. Handles are visible even in Javascript
   Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = { val};
-  //Local<Boolean> b = Boolean::New(isolate, true);
-  //argv[1] = {b};
+  Handle<Value> argv[] = {val};
 
   //execute the callback
   Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
