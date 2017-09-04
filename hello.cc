@@ -30,6 +30,17 @@ struct Work{
   Persistent<Function> callback;
 };
 
+typedef struct pos pos;
+struct pos{
+  int x;
+  int y;
+};
+
+typedef struct sygPos sygPos;
+struct sygPos{
+  uv_work_t req;
+  pos arrayPos[2];
+};
 
 void registerHotKeyF10(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
@@ -85,10 +96,6 @@ static void registerHKF10(uv_work_t *req){
         //Communication between threads(uv_work_t and uv_async_t);
         work->async.data = (void*) req;
         uv_async_send(&work->async);
-
-        //args.GetReturnValue().Set(Boolean::New(isolate, true));
-        //std::transform(Boolean::New(isolate, true));
-        //break;
       }
     }
   }
@@ -107,11 +114,11 @@ static void WorkAsyncComplete(uv_work_t *req, int status){
 
   //Creates a variable of type Number which stores a value of v8::Number with value 1
   //Local variables are just visible to this scope. Handles are visible even in Javascript
-  Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  //Local<Number> val = Number::New(isolate, 1);
+  //Handle<Value> argv[] = {val};
 
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  //Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
 
   //Free up the persistent function callback
   work->callback.Reset();
@@ -148,9 +155,121 @@ void registerHKF10Async(const FunctionCallbackInfo<Value>& args){
   args.GetReturnValue().Set(Undefined(isolate));
 }
 
+static void getCursorPos(uv_work_t *req){
+
+  POINT pt;
+  Work *work = static_cast<Work*>(req->data);
+  MSG msg = {0};
+  unsigned int i=0;
+  sygPos obj;
+  sygPos * pobj;
+  pos arPos[2];
+
+  pobj=&obj;
+  if(RegisterHotKey(NULL, 1, NULL, 0x52)){
+
+    while(GetMessage(&msg, NULL, 0, 0)){
+
+      if(msg.message == WM_HOTKEY){
+
+        GetCursorPos(&pt);
+        _tprintf(_T("Pos: %d, %d\n"), pt.x, pt.y);
+        arPos[i].x = pt.x;
+        arPos[i].y = pt.y;
+
+        HDC dc = GetDC(NULL);
+        COLORREF _color = GetPixel(dc, arPos[i].x, arPos[i].y);
+        int _red = GetRValue(_color);
+        int _green = GetGValue(_color);
+        int _blue = GetBValue(_color);
+        ReleaseDC(NULL, dc);
+
+        /*
+        Local<Object> obj = Object::New(isolate);
+
+        obj->Set(String::NewFromUtf8(isolate, "red"), Number::New(isolate, _red));
+        obj->Set(String::NewFromUtf8(isolate, "green"), Number::New(isolate, _green));
+        obj->Set(String::NewFromUtf8(isolate, "blue"), Number::New(isolate, _blue));
+        */
+        obj.arrayPos[i] = arPos[i];
+
+        //int red = obj->Get(String::NewFromUtf8(isolate, "red"))->IntegerValue();
+        //printf("Red: %d\n", red);
+
+        /*
+        printf("Red: 0x%02x\n", _red);
+        printf("Green: 0x%02x\n", _green);
+        printf("Blue: 0x%02x\n", _blue);
+        */
+        i++;
+
+        if(i==2){
+          //Communication between threads(uv_work_t and uv_async_t);
+          obj.req = *req;
+          //printf("pointer req: %p\n", &pobj->req);
+
+          work->async.data = (void*)&obj;
+          uv_async_send(&work->async);
+
+          Sleep(1);
+          break;
+        }
+      }
+    }
+    UnregisterHotKey(NULL, 1);
+  }
+}
+
+void sendSygnalCursorPos(uv_async_t *handle) {
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+
+  //Local<Object> colors = static_cast<Object*>(handle->data)->ToObject();
+  sygPos *pobj = ((sygPos*) handle->data);
+  uv_work_t req = ((uv_work_t) pobj->req);
+  Work *work = static_cast<Work*> (req.data);
+
+  Local<Object> objJSON = Object::New(isolate);
+
+  Local<Object> obj = Object::New(isolate);
+  obj->Set(String::NewFromUtf8(isolate, "x"), Number::New(isolate, pobj->arrayPos[0].x));
+  obj->Set(String::NewFromUtf8(isolate, "y"), Number::New(isolate, pobj->arrayPos[0].y));
+
+  objJSON->Set(String::NewFromUtf8(isolate, "NW"), obj);
+
+  obj = Object::New(isolate);
+  obj->Set(String::NewFromUtf8(isolate, "x"), Number::New(isolate, pobj->arrayPos[1].x));
+  obj->Set(String::NewFromUtf8(isolate, "y"), Number::New(isolate, pobj->arrayPos[1].y));
+
+  objJSON->Set(String::NewFromUtf8(isolate, "SE"), obj);
+
+  //printf("pointer req: %p\n", &pobj->req);
+
+  Handle<Value> argv[] = {objJSON};
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+}
+
+void getCursorPositionAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  Work* work = new Work();
+  work->request.data = work;
+
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[0]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  uv_async_init(uv_default_loop(), &work->async, sendSygnalCursorPos);
+  uv_queue_work(uv_default_loop(), &work->request, getCursorPos, NULL);
+
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
 void init(Local<Object> exports) {
-  //NODE_SET_METHOD(exports, "registerHotKeyF10", registerHotKeyF10);
   NODE_SET_METHOD(exports, "registerHKF10Async", registerHKF10Async);
+  NODE_SET_METHOD(exports, "getCursorPosition", getCursorPositionAsync);
 }
 
 NODE_MODULE(addon, init)
