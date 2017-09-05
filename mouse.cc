@@ -146,10 +146,88 @@ void leftClickAsync(const FunctionCallbackInfo<Value>& args){
   args.GetReturnValue().Set(Undefined(isolate));
 }
 
+static void getColorFishing(uv_work_t *req){
+
+  Work *work = static_cast<Work*>(req->data);
+  int i=0;
+  int NSAMPLES = 60;
+
+  SetCursorPos(work->pos.x, work->pos.y);
+
+  Sleep(9000);
+
+  while(i<NSAMPLES){
+    HDC dc = GetDC(NULL);
+    COLORREF _color = GetPixel(dc, work->pos.x, work->pos.y);
+    int _red = GetRValue(_color);
+    int _green = GetGValue(_color);
+    int _blue = GetBValue(_color);
+    ReleaseDC(NULL, dc);
+
+    printf("Red: 0x%02x %d\n", _red, _red);
+    printf("Green: 0x%02x %d\n", _green, _green);
+    printf("Blue: 0x%02x %d\n", _blue, _blue);
+    printf("\n");
+
+    if((_red < 20)&&(_green > 100)){
+      i=NSAMPLES;
+    }else{
+      Sleep(100);
+      i++;
+    }
+  }
+}
+
+static void getColorFishingComplete(uv_work_t *req, int status){
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+
+  Work *work = static_cast<Work*>(req->data);
+
+  //Creates a variable of type Number which stores a value of v8::Number with value 1
+  //Local variables are just visible to this scope. Handles are visible even in Javascript
+  Local<Number> val = Number::New(isolate, 1);
+  Handle<Value> argv[] = {val};
+
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
+  //Free up the persistent function callback
+  work->callback.Reset();
+  delete work;
+}
+
+void getColorFishingAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  Work* work = new Work();
+  work->request.data = work;
+
+  Local<Object> posObj = Local<Object>::Cast(args[0]);
+  Local<Value> x = posObj->Get(String::NewFromUtf8(isolate, "x"));
+  work->pos.x = x->Uint32Value();
+  Local<Value> y = posObj->Get(String::NewFromUtf8(isolate, "y"));
+  work->pos.y = y->Uint32Value();
+
+  //posObj->Set(String::NewFromUtf8(isolate, "x"), Number::New(isolate, x->Uint32Value()));
+  //posObj->Set(String::NewFromUtf8(isolate, "y"), Number::New(isolate, y->Uint32Value()));
+  //work->ppos.Reset(isolate, posObj);
+
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[1]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  uv_queue_work(uv_default_loop(), &work->request, getColorFishing, getColorFishingComplete);
+
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
 void init(Local<Object> exports) {
   //NODE_SET_METHOD(exports, "getCursorPosition", getCursorPositionAsync);
   NODE_SET_METHOD(exports, "setCursorPos", setCursorPosAsync);
   NODE_SET_METHOD(exports, "leftClick", leftClickAsync);
+  NODE_SET_METHOD(exports, "getColorFishing", getColorFishingAsync);
 }
 
 NODE_MODULE(mouse, init)
