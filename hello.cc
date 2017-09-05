@@ -211,7 +211,7 @@ static void getCursorPos(uv_work_t *req){
           work->async.data = (void*)&obj;
           uv_async_send(&work->async);
 
-          Sleep(1);
+          Sleep(500);
           break;
         }
       }
