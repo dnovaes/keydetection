@@ -177,12 +177,6 @@ static void getCursorPos(uv_work_t *req){
         arPos[i].x = pt.x;
         arPos[i].y = pt.y;
 
-        HDC dc = GetDC(NULL);
-        COLORREF _color = GetPixel(dc, arPos[i].x, arPos[i].y);
-        int _red = GetRValue(_color);
-        int _green = GetGValue(_color);
-        int _blue = GetBValue(_color);
-        ReleaseDC(NULL, dc);
 
         /*
         Local<Object> obj = Object::New(isolate);
@@ -196,11 +190,6 @@ static void getCursorPos(uv_work_t *req){
         //int red = obj->Get(String::NewFromUtf8(isolate, "red"))->IntegerValue();
         //printf("Red: %d\n", red);
 
-        /*
-        printf("Red: 0x%02x\n", _red);
-        printf("Green: 0x%02x\n", _green);
-        printf("Blue: 0x%02x\n", _blue);
-        */
         i++;
 
         if(i==2){
