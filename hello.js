@@ -48,10 +48,10 @@ addon.getCursorPosition(function(res){
   res.NW.y = parseInt(res.NW.y);
 
   //temp: my client
-  res.SE.x = 1406;
-  res.SE.y = 621;
-  res.NW.x = 759;
-  res.NW.y = 147;
+  res.SE.x = 1397;
+  res.SE.y = 598;
+  res.NW.x = 804;
+  res.NW.y = 163;
 
   //length and height for each SQM
   sqm.length = (res.SE.x - res.NW.x)/15;
@@ -95,13 +95,13 @@ function startFishing(){
     "x": coords.x+1, //center+2sqm to right
     "y": center.y+(sqm.height/4)+4
   },function(res){
-    console.log("FISH NOW!!");
+    console.log("Fishing Rod Pulled Up!!");
     keyboard.pressKbKey("Fishing", function (res){
       //that is the last async function to execute.
       //IF pause is not requested, continue Fishing
       //recursevely call to Fish!
       if(!pause){
-        setTimeout(startFishing, 2000);
+        setTimeout(startFishing, 1000);
       }
     });
   });
