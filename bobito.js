@@ -101,7 +101,7 @@ function startFishing(){
       //IF pause is not requested, continue Fishing
       //recursevely call to Fish!
       if(!pause){
-        setTimeout(startFishing, 1000);
+        setTimeout(startFishing, 1500);
       }
     });
   });
