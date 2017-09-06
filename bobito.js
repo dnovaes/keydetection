@@ -92,7 +92,7 @@ function startFishing(){
   //wait for the change of color, press LEFTCLICK of mouse again
   console.log("Waiting for fish....");
   mouse.getColorFishing({
-    "x": coords.x+1, //center+2sqm to right
+    "x": coords.x, //center+2sqm to right
     "y": center.y+(sqm.height/4)+4
   },function(res){
     console.log("Fishing Rod Pulled Up!!");
