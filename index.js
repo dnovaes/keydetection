@@ -35,10 +35,6 @@ function createWindow () {
 // Some APIs can only be used after this event occurs.
 app.on('ready', function(err,res){
     createWindow();
-
-    addon.registerHKF10Async(function(res){
-      console.log("F10 key detected!!");
-    });
 });
 
 console.log(process.version);
