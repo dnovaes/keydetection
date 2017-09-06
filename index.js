@@ -9,7 +9,7 @@ let win
 
 function createWindow () {
   // Create the browser window.
-  win = new BrowserWindow({width: 800, height: 600})
+  win = new BrowserWindow({width: 450, height: 350})
 
   // and load the index.html of the app.
   win.loadURL(url.format({
@@ -19,7 +19,7 @@ function createWindow () {
   }))
 
   // Open the DevTools.
-  //win.webContents.openDevTools()
+  win.webContents.openDevTools()
 
   // Emitted when the window is closed.
   win.on('closed', () => {
@@ -60,16 +60,3 @@ app.on('activate', () => {
 // code. You can also put them in separate files and require them here
 
 //var small_mod = require("small_modules/cfunc.js");
-
-/*
-registerHKF10Callback = function(fn){
-  return function(){
-    var args = [].slice.call(arguments),
-        callback = args.pop(),
-        result = fn.apply(this, args);
-    callback(result);
-  }
-}
-
-registerHKF10Async = registerHKF10Callback(addon.registerHotKeyF10);
-*/

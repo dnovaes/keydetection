@@ -1,0 +1,117 @@
+body{
+  background: url("../img/textures_dark_vertical.jpg") repeat;
+  overflow: hidden;
+}
+
+#container{
+  margin: 0 auto;
+  max-width: 500px;
+  height: 190px;
+}
+
+#container-right{
+  width: 200px;
+  height: auto;
+  float: right;
+  padding-right: 30px;
+}
+@font-face{
+  font-family: pokemonh;
+  src: url("Pokemon Hollow.ttf");
+}
+
+#title{
+  max-width:250px;
+  height: auto;
+  margin: 0 auto;
+}
+
+#img_title{
+  width:100%;
+  height: auto;
+}
+
+#background_pkm{
+  width: 165px;
+  height:auto;
+  position: absolute;
+  z-index: -1;
+  padding-top: 20px;
+}
+
+.menu-item{
+  width: 200px;
+  height: 50px;
+  background: red;
+  background: linear-gradient(#774247, red);
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.menu-item > #icon_rod{
+  width: 60px;
+  height: 50px;
+  float:left;
+}
+
+.menu-item > #icon_tv{
+  width: 40px;
+  height: auto;
+  margin-top:5px;
+  margin-left: 10px;
+  float: left;
+}
+
+.menu-item > #text{
+  width: 130px;
+  height: 50px;
+  float:left;
+
+  color: white;
+  font-family: pokemonh;
+  font-size: 17px;
+  font-weight: bold;
+
+  line-height:50px;
+  text-align:center;
+}
+
+.coord_field{
+  width: 40px;
+  box-shadow: -2px 2px 1px #e44d4d;
+  padding: 3px;
+  border: #443d3d solid thin;
+}
+
+.coord_label{
+  color: white;
+  font-family: pokemonh;
+  font-size: 17px;
+  font-weight: bold;
+}
+
+#coord_span{
+  height: 35px;
+  line-height: 35px;
+  margin-left: 10px;
+  display: inline;
+}
+
+#console-title{
+  color: #f7e53f;
+  font-family: monospace;
+  border-bottom: 1px solid #774247;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+#console{
+  width: 215px;
+  height: 70px;
+  color: #f7e53f;
+  padding: 2px;
+  font-family: monospace;
+  overflow-y: scroll;
+
+}
