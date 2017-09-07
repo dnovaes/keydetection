@@ -38,7 +38,6 @@ divFishing.addEventListener("click", function(){
     divFishing.style.background = 'linear-gradient(red, #774247)';
     divFishing.style.border = '1px solid white';
     setTimeout(function(){
-      divFishing.style.background = 'linear-gradient(#774247, #f7e53f)';
       divFishing.style.border = 'none';
     }, 100);
     prepareForFishing();
