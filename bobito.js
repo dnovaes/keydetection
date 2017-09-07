@@ -110,12 +110,11 @@ function startFishing(){
   mouse.setCursorPos(coords, function(res){});
 
   //press keys CTRL + Z
-  keyboard.pressKbKey("Fishing", function (res){});
-
-  //press LEFTCLICK of mouse
-  mouse.leftClick(function(res){
-      //console.log("Fishing");
+  keyboard.pressKbKey("Fishing", function (res){
+    //press LEFTCLICK of mouse
+    mouse.leftClick(function(res){});
   });
+
 
   //wait for the change of color, press LEFTCLICK of mouse again
   console.log("Waiting for fish....");
