@@ -154,7 +154,7 @@ static void getColorFishing(uv_work_t *req){
 
   SetCursorPos(work->pos.x, work->pos.y);
 
-  Sleep(9000);
+  Sleep(8000);
 
   while(i<NSAMPLES){
     HDC dc = GetDC(NULL);
