@@ -45,7 +45,8 @@ struct sygPos{
 };
 
 #define TIMER_ID 1
-#define NSAMPLESZOOM 30;
+#define NSAMPLESZOOM 17;
+const int CZOOMFACTOR=12;
 BOOL fDraw = FALSE;
 BOOL fbtDown= FALSE;
 BOOL fprtScreen = FALSE;
@@ -59,13 +60,14 @@ LRESULT CALLBACK WndProc(
   _In_ LPARAM lParam
 );
 int CaptureAnImage(HWND hWnd);
-bool LoadBMPIntoDC(HDC hDC, LPCTSTR bmpfile);
-void drawMagnefier(HWND hWnd);
-void paintPixels(HDC hdcWindow, int dx, int dy, int zoomFactor, COLORREF cPixel, int xOffset, int yOffset);
+bool LoadBMPIntoDC(HDC hDC, LPCTSTR bmpfile, HWND hWnd);
+void drawMagnefier(HWND hWnd, HDC hdcMem);
+void paintPixels(HDC hdcWindow, int dx, int dy, COLORREF cPixel, int xOffset, int yOffset);
+int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t *req);
 
-//int __stdcall wWinMain(HINSTANCE module, HINSTANCE, PWSTR, int)
-int __stdcall winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
-{
+//int __stdcall winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
+//int __stdcall winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t *req){
+int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t *req){
   WNDCLASS wc = {};
   wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
   wc.hInstance = module;
@@ -86,17 +88,24 @@ int __stdcall winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
   */
   RegisterClass(&wc);
 
+  Work *work = static_cast<Work*>(req->data);
+  //Local<Number> val = Number::New(isolate, 1);
+  //Handle<Value> argv[] = {val};
+  //execute the callback
+  //Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
   int width = GetSystemMetrics(SM_CXSCREEN);
   int height = GetSystemMetrics(SM_CYSCREEN);
 
   //WS_MAXIMIZE, WS_VISIBLE, WS_POPUPWINDOW
-  //hWnd = CreateWindow(wc.lpszClassName, _T("LeftClick on your screen corners"), (WS_MAXIMIZE | WS_POPUPWINDOW),
-  //    CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, module, nullptr);
-
+  HWND hWnd = CreateWindow(wc.lpszClassName, _T("LeftClick on your screen corners"),
+      (WS_VISIBLE| WS_POPUPWINDOW), 0, 0, width, height, NULL, NULL, wc.hInstance, NULL);
+/*
   HWND hWnd = CreateWindowEx(
 		0, wc.lpszClassName, _T("LeftClick on your screen corners"),
    (WS_POPUPWINDOW | WS_VISIBLE | WS_EX_TOPMOST), 0, 0,
   	width, height, NULL, NULL, wc.hInstance, NULL);
+*/
 
   if (!hWnd){
     MessageBox(NULL,
@@ -134,7 +143,15 @@ int __stdcall winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
     //RedrawWindow(hWnd, NULL, NULL, RDW_UPDATENOW);
 
     if(msg.message == WM_QUIT){
-      break;
+      CloseWindow(hWnd);
+      DestroyWindow(hWnd);
+      //break;
+    }
+    if(((msg.message == WM_KEYDOWN)&&(msg.wParam == VK_ESCAPE))||(msg.message == WM_LBUTTONUP)){
+      //PostQuitMessage(0);
+      work->async.data = (void*) req;
+      uv_async_send(&work->async);
+      PostQuitMessage(1);
     }
   }
   return (int) msg.wParam;
@@ -147,29 +164,41 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
     TCHAR greeting[] = _T("Hello, World!");
 
     switch (msg){
-      /*case WM_TIMER:
-        //InvalidateRect(hWnd, NULL, TRUE); //force a WM_PAINT message and updates the window
-        break;*/
+      /*
+      case WM_TIMER:
+        InvalidateRect(hWnd, NULL, TRUE); //force a WM_PAINT message and updates the window
+        break;
+      */
       case WM_KEYDOWN:
-        if(wParam == VK_ESCAPE){ //User hit Escape, end the app
+        //ptLCrelease indicates pos of mouse movement
+        POINT lp;
+        switch(wParam){
+          case VK_ESCAPE:
             PostQuitMessage(0);
-         }
-         break;
+            break;
+          case VK_LEFT:
+            GetCursorPos(&lp);
+            SetCursorPos(lp.x-1, lp.y);
+            break;
+          case VK_RIGHT:
+            GetCursorPos(&lp);
+            SetCursorPos(lp.x+1, lp.y);
+            break;
+          case VK_UP:
+            GetCursorPos(&lp);
+            SetCursorPos(lp.x, lp.y-1);
+            break;
+          case VK_DOWN:
+            GetCursorPos(&lp);
+            SetCursorPos(lp.x, lp.y+1);
+            break;
+        }
+        break;
       case WM_LBUTTONDOWN:
         {
           fDraw = false;
           ptLC.x = GET_X_LPARAM(lParam);
           ptLC.y = GET_Y_LPARAM(lParam);
-
-          char strMsg[MAX_PATH];
-          strcpy(strMsg, "xPos: ");
-          std::string x = std::to_string(ptLC.x);
-          strcat(strMsg, x.c_str());
-
-          strcat(strMsg, _T("\nyPos: "));
-          std::string y = std::to_string(ptLC.y);
-          strcat(strMsg, y.c_str());
-
           fbtDown = true;
 
           //HINSTANCE hInstance = GetModuleHandle(NULL);
@@ -181,14 +210,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
         {
           fbtDown = false;
           fDraw = false;
-          PostQuitMessage(0);
           break;
         }
       case WM_MOUSEMOVE:
         {
           //ptLCrelease indicates pos of mouse movement
-          ptLCrelease.x = GET_X_LPARAM(lParam);
-          ptLCrelease.y = GET_Y_LPARAM(lParam);
+          //+1 is an adjustment to fit with the same way as Sharex program;
+          ptLCrelease.x = (GET_X_LPARAM(lParam))+1;
+          ptLCrelease.y = (GET_Y_LPARAM(lParam))+1;
           if(fbtDown){
             fDraw = true;
           }
@@ -200,17 +229,35 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
           hdc = BeginPaint(hWnd, &ps);
           HPEN hPen;
 
-          //std::string drawstr = std::to_string(fDraw);
-          //TextOut(hdc,5, 5, drawstr.c_str(), _tcslen(greeting));
           TextOut(hdc,5, 5, greeting, _tcslen(greeting));
+
           if(!fprtScreen){
             CaptureAnImage(hWnd);
           }
           HDC hdcWindow = GetDC(hWnd);
-          LoadBMPIntoDC(hdcWindow, _T("captureqwsx.bmp"));
+          LoadBMPIntoDC(hdcWindow, _T("captureqwsx.bmp"), hWnd);
           ReleaseDC(hWnd, hdcWindow);
 
           if(fDraw){
+            char strMsg[MAX_PATH];
+            strcpy(strMsg, "X: ");
+            std::string var = std::to_string(ptLC.x);
+            strcat(strMsg, var.c_str());
+
+            strcat(strMsg, _T(" Y: "));
+            var = std::to_string(ptLC.y);
+            strcat(strMsg, var.c_str());
+
+            strcat(strMsg, _T(" W: "));
+            var = std::to_string(ptLCrelease.x - ptLC.x);
+            strcat(strMsg, var.c_str());
+
+            strcat(strMsg, _T(" H: "));
+            var = std::to_string(ptLCrelease.y - ptLC.y);
+            strcat(strMsg, var.c_str());
+
+            TextOut(hdc, ptLC.x, ptLC.y-15, strMsg, _tcslen(strMsg));
+
             hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
             SelectObject(hdc, hPen);
             SetBkColor(hdc, RGB(0,0,0)); //background of dashed lines
@@ -223,16 +270,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
             LineTo(hdc, ptLCrelease.x, ptLC.y);
             LineTo(hdc, ptLCrelease.x, ptLCrelease.y);
 
-            ReleaseDC(hWnd, hdc);
           }
-          drawMagnefier(hWnd);
 
           EndPaint(hWnd, &ps);
           break;
         }
-      case WM_DESTROY:
-          PostQuitMessage(0);
-          break;
+      /*case WM_DESTROY:
+          break;*/
       default:
           return DefWindowProc(hWnd, msg, wParam, lParam);
           break;
@@ -241,10 +285,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
 
 }
 
-void drawMagnefier(HWND hWnd){
+void drawMagnefier(HWND hWnd, HDC hdcMem){
   int i, j;
   int nSamples = NSAMPLESZOOM;
-  HDC hdcWindow = GetDC(hWnd);
+  //HDC hdcWindow = GetDC(hWnd);
   COLORREF cPixel;
 
   RECT rcClient;
@@ -254,44 +298,111 @@ void drawMagnefier(HWND hWnd){
   dMagnefier.x = rcClient.right/10;
   dMagnefier.y = rcClient.bottom/10;
 
+  //nSamples/2 is the distance from the corner to the center
   for(i=0;i<nSamples;i++){ //lines
     for(j=0;j<nSamples;j++){ //columns
-      cPixel = GetPixel(hdcWindow, ptLCrelease.x-(nSamples/2)+i, ptLCrelease.y-(nSamples/2)+j);
-      if(i == (nSamples/2-1) || j == (nSamples/2-1)){
+      cPixel = GetPixel(hdcMem, ptLCrelease.x-(nSamples/2)+i, ptLCrelease.y-(nSamples/2)+j);
+      if(i == (nSamples/2) || j == (nSamples/2)){
         //ligthen tose pixels
         cPixel = RGB(GetRValue(cPixel)*1.7, GetGValue(cPixel)*1.7, GetBValue(cPixel)*1.7);
       }
-      paintPixels(hdcWindow, dMagnefier.x, dMagnefier.y, 6, cPixel, i, j);
+      paintPixels(hdcMem, dMagnefier.x, dMagnefier.y, cPixel, i, j);
     }
   }
-  ReleaseDC(hWnd, hdcWindow);
+
+  char strMsg[MAX_PATH];
+  strcpy(strMsg, _T("X: "));
+  std::string var = std::to_string(ptLCrelease.x);
+  strcat(strMsg, var.c_str());
+
+  strcat(strMsg, _T(" Y:  "));
+  var = std::to_string(ptLCrelease.y);
+  strcat(strMsg, var.c_str());
+
+  TextOut(hdcMem, ptLCrelease.x-3*CZOOMFACTOR+dMagnefier.x,
+      ptLCrelease.y+(nSamples/2)*CZOOMFACTOR+dMagnefier.y, strMsg, _tcslen(strMsg));
+  //ReleaseDC(hWnd, hdcWindow);
 }
 
 //xOffset = position x of the current pixel (normal scale)
 //dx and dy are x and y positions where the magnefier should be
-void paintPixels(HDC hdcWindow, int dx, int dy, int zoomFactor, COLORREF cPixel, int xOffset, int yOffset){
-  int i,j;
+void paintPixels(HDC hdcWindow, int dx, int dy, COLORREF cPixel, int xOffset, int yOffset){
+  //int i,j;
   int nSamples= NSAMPLESZOOM;
+  int posx, posy;
   bool fCenter = false;
 
-  if((xOffset == (nSamples/2-1)) && (yOffset == (nSamples/2-1))){
+  if((xOffset == (nSamples/2)) && (yOffset == (nSamples/2))){
+    //Center square of the magnifier
     fCenter = true;
   }
 
-  for(i=0;i<zoomFactor;i++){ //lines
-    for(j=0;j<zoomFactor;j++){ //columns
-      if((fCenter)&&((i==0)||(i==zoomFactor-1)||j==0||j==zoomFactor-1)){
-        SetPixel(hdcWindow, ptLCrelease.x-(nSamples/2)*zoomFactor+xOffset*zoomFactor+dx+i,
-            ptLCrelease.y-(nSamples/2)*zoomFactor+yOffset*zoomFactor+dy+j, RGB(255,255,255));
-      }else{
-        SetPixel(hdcWindow, ptLCrelease.x-(nSamples/2)*zoomFactor+xOffset*zoomFactor+dx+i,
-            ptLCrelease.y-(nSamples/2)*zoomFactor+yOffset*zoomFactor+dy+j, cPixel);
-      }
+  /*
+  for(i=0;i<CZOOMFACTOR;i++){ //lines
+    for(j=0;j<CZOOMFACTOR;j++){ //columns
+      posx = ptLCrelease.x-(nSamples/2)*CZOOMFACTOR+xOffset*CZOOMFACTOR+dx+i;
+      posy = ptLCrelease.y-(nSamples/2)*CZOOMFACTOR+yOffset*CZOOMFACTOR+dy+j;
+      SetPixel(hdcWindow, posx, posy, cPixel);
     }
   }
+  */
+
+  const int
+    width = CZOOMFACTOR,
+    height = CZOOMFACTOR,
+    size = width * height * 3;
+  byte * data;
+  //data = new byte[size];
+  data = (byte*) malloc (size*sizeof(byte));
+  for (int i = 0; i < size; i += 3){
+    //each line/column has CZOOMFACTOR*3-1 bytes or CZOOMFACTOR pixels
+    if(fCenter&&(((i>=0)&&(i<=(width*3-1)))||(i>=(height-1)*width*3 && i<=(height-1)*(width*4-1)))){
+      data[i] = 255;
+      data[i + 1] = 255;
+      data[i + 2] = 255;
+    }else if(
+        (fCenter)
+        &&(
+          ((i % (width*3)) == 0)
+          ||
+          ((i % (width*3)) == 33)
+        )){
+      data[i] = 255;
+      data[i + 1] = 255;
+      data[i + 2] = 255;
+    }else{
+      //seems like the DIB is printing BGR instead of RGB...
+      data[i] = GetBValue(cPixel);
+      data[i + 1] = GetGValue(cPixel);
+      data[i + 2] = GetRValue(cPixel);
+    }
+  }
+
+  BITMAPINFOHEADER bmih;
+  bmih.biBitCount = 24;
+  bmih.biClrImportant = 0;
+  bmih.biClrUsed = 0;
+  bmih.biCompression = BI_RGB;
+  bmih.biWidth = width;
+  bmih.biHeight = height;
+  bmih.biPlanes = 1;
+  bmih.biSize = 40;
+  bmih.biSizeImage = size;
+
+  BITMAPINFO bmpi;
+  bmpi.bmiHeader = bmih;
+
+  posx = ptLCrelease.x-((nSamples/2)*CZOOMFACTOR)+(xOffset*CZOOMFACTOR)+dx;
+  posy = ptLCrelease.y-(nSamples/2)*CZOOMFACTOR+yOffset*CZOOMFACTOR+dy;
+
+  SetDIBitsToDevice(hdcWindow, posx, posy, width, height, 0, 0, 0, height, data, &bmpi, DIB_RGB_COLORS);
+
+  //delete[] data;
+  free(data);
 }
 
-bool LoadBMPIntoDC(HDC hDC, LPCTSTR bmpfile){
+//return the BITMAP loaded in the device context (hdc)
+bool LoadBMPIntoDC(HDC hDC, LPCTSTR bmpfile, HWND hWnd){
 
   // check if params are valid
 	if ( ( NULL == hDC  ) || ( NULL == bmpfile ) )
@@ -317,6 +428,9 @@ bool LoadBMPIntoDC(HDC hDC, LPCTSTR bmpfile){
 	// now get the bmp size
 	BITMAP bm;
 	GetObject ( hBmp, sizeof(bm), &bm );
+
+  drawMagnefier(hWnd, dcmem);
+
 	// and blit it to the visible dc
 	if ( BitBlt ( hDC, 0, 0, bm.bmWidth, bm.bmHeight, dcmem,
 		0, 0, SRCCOPY ) == 0 )
@@ -325,8 +439,9 @@ bool LoadBMPIntoDC(HDC hDC, LPCTSTR bmpfile){
 		return false;
 	}
 
-	DeleteDC ( dcmem );  // clear up the memory dc
-	return true;
+  DeleteObject(hBmp); // clear memory form the handle which has the loaded image
+	DeleteDC(dcmem);  // clear up the memory dc
+  return true;
 }
 
 //a Painting Function
@@ -360,6 +475,7 @@ int CaptureAnImage(HWND hWnd)
     //This is the best stretch mode
     //SetStretchBltMode(hdcWindow,HALFTONE);
 
+    /*
     char strMsg[MAX_PATH];
     strcpy(strMsg, "rcClient.right: ");
     x = std::to_string(rcClient.right);
@@ -369,14 +485,16 @@ int CaptureAnImage(HWND hWnd)
     y = std::to_string(rcClient.bottom);
     strcat(strMsg, y.c_str());
 
-    TextOut(hdcWindow, 5, 20, strMsg, _tcslen(strMsg));
+    TextOut(hdc, 5, 20, strMsg, _tcslen(greeting));
+    */
+
 
     //The source DC is the entire screen and the destination DC is the current window (HWND)
     //if(!StretchBlt(hdcWindow,
     if(!BitBlt(hdcWindow,
                0,0,
                rcClient.right-1, rcClient.bottom-1,
-               hdcScreen, 1, 1,
+               hdcScreen, 0, 0,
                SRCCOPY))
     {
         MessageBox(hWnd, _T("StretchBlt has failed"), _T("Failed"), MB_OK);
@@ -471,7 +589,6 @@ int CaptureAnImage(HWND hWnd)
     GlobalUnlock(hDIB);
     GlobalFree(hDIB);
 
-
     //Close the handle for the file that was created
     CloseHandle(hFile);
 
@@ -497,7 +614,31 @@ static void getScreenReso(uv_work_t *req){
 
   mbstowcs_s(&outSize, wtext, size, text, size-1);
   //LPSTR pcmdLine = wtext;
-  winmain(module, NULL, text, SW_SHOWMAXIMIZED);
+  winmain(module, NULL, text, SW_SHOWMAXIMIZED, &work->request);
+}
+
+void sendSygnalResolution(uv_async_t *handle) {
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+
+  sygPos *pobj = ((sygPos*) handle->data);
+  uv_work_t req = ((uv_work_t) pobj->req);
+  Work *work = static_cast<Work*> (req.data);
+
+  Local<Object> obj = Object::New(isolate);
+  obj->Set(String::NewFromUtf8(isolate, "x"), Number::New(isolate, pobj->arrayPos[0].x));
+  obj->Set(String::NewFromUtf8(isolate, "y"), Number::New(isolate, pobj->arrayPos[0].y));
+  obj->Set(String::NewFromUtf8(isolate, "w"), Number::New(isolate, pobj->arrayPos[0].w));
+  obj->Set(String::NewFromUtf8(isolate, "h"), Number::New(isolate, pobj->arrayPos[0].h));
+
+  Local<Number> val = Number::New(isolate, 1);
+  Handle<Value> argv[] = {val};
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
+  //Free up the persistent function callback
+  work->callback.Reset();
+  delete work;
 }
 
 void getScreenResoAsync(const FunctionCallbackInfo<Value>& args){
@@ -511,6 +652,7 @@ void getScreenResoAsync(const FunctionCallbackInfo<Value>& args){
   work->callback.Reset(isolate, callback);
 
   //worker thread using libuv
+  uv_async_init(uv_default_loop(), &work->async, sendSygnalResolution);
   uv_queue_work(uv_default_loop(), &work->request, getScreenReso, NULL);
 
   args.GetReturnValue().Set(Undefined(isolate));
