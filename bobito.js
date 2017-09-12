@@ -2,7 +2,10 @@
 const addon = require("./build/Release/addon");
 const mouse = require("./build/Release/mouse");
 const keyboard = require("./build/Release/keyboard");
+const sharexNode = require("./build/Release/sharex");
+const {remote} = require('electron')
 
+var win = remote.BrowserWindow.fromId(1);
 var pause = true;
 
 var center = {
@@ -41,6 +44,18 @@ divFishing.addEventListener("click", function(){
       divFishing.style.border = 'none';
     }, 100);
     prepareForFishing();
+});
+
+divScreenCoords = document.getElementById("screenCoords");
+divScreenCoords.addEventListener("click", function(){
+    win.minimize();
+    //win.blur();
+    //win.blurWebView();
+    //win.setFocusable(false);
+    sharexNode.getScreenResolution(function(res){
+      printlog(res);
+      //win.show();
+    });
 });
 
 //var posFishing;
