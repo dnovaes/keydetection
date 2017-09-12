@@ -11,6 +11,10 @@
     {
       "target_name": "mouse",
       "sources": [ "mouse.cc" ]
+    },
+    {
+      "target_name": "sharex",
+      "sources": [ "window.cc" ]
     }
   ]
 }
