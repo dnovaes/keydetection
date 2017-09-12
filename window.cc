@@ -111,6 +111,10 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
   EnableWindow(hWnd, true);
   MSG msg;
 
+  RegisterHotKey(hWnd, 1, NULL, VK_LEFT);
+  RegisterHotKey(hWnd, 2, NULL, VK_UP);
+  RegisterHotKey(hWnd, 3, NULL, VK_RIGHT);
+  RegisterHotKey(hWnd, 4, NULL, VK_DOWN);
   //HBRUSH brush = CreateSolidBrush(RGB(0, 0, 255));
   //wc.hbrBackground    = (HBRUSH)(COLOR_WINDOW+1);
   //SetClassLongPtr(hWnd, GCLP_HBRBACKGROUND, reinterpret_cast<LONG_PTR>(brush));
@@ -149,6 +153,10 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
       work->async.data = (void*)pobj;
       uv_async_send(&work->async);
       //CloseWindow(hWnd);
+      UnregisterHotKey(hWnd, 1);
+      UnregisterHotKey(hWnd, 2);
+      UnregisterHotKey(hWnd, 3);
+      UnregisterHotKey(hWnd, 4);
       //kill process window by force
       DestroyWindow(hWnd);
       break;
@@ -162,6 +170,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
     PAINTSTRUCT ps;
     HDC hdc;
     TCHAR greeting[] = _T("Hello, World!");
+    POINT lp;
 
     switch (msg){
       /*
@@ -169,6 +178,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
         InvalidateRect(hWnd, NULL, TRUE); //force a WM_PAINT message and updates the window
         break;
       */
+      case WM_HOTKEY:
+        switch(wParam){
+          case 1: //arrow left
+            GetCursorPos(&lp);
+            SetCursorPos(lp.x-1, lp.y);
+            break;
+          case 2: //arrow up
+            GetCursorPos(&lp);
+            SetCursorPos(lp.x, lp.y-1);
+            break;
+          case 3: //arrow right
+            GetCursorPos(&lp);
+            SetCursorPos(lp.x+1, lp.y);
+            break;
+          case 4: //arrow down
+            GetCursorPos(&lp);
+            SetCursorPos(lp.x, lp.y+1);
+            break;
+        }
+        break;
       case WM_KILLFOCUS:
         SetFocus(hWnd);
         BringWindowToTop(hWnd);
@@ -177,7 +206,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
         break;
       case WM_KEYDOWN:
         //ptLCrelease indicates pos of mouse movement
-        POINT lp;
         switch(wParam){
           case VK_ESCAPE:
             //PostQuitMessage(0);
