@@ -1,7 +1,6 @@
 const {app, BrowserWindow} = require('electron')
 const path = require('path')
 const url = require('url')
-const addon = require("./build/Release/addon");
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -9,7 +8,8 @@ let win
 
 function createWindow () {
   // Create the browser window.
-  win = new BrowserWindow({width: 450, height: 350})
+  win = new BrowserWindow({width: 450, height: 300, frame: false, resizable: false, backgroundThrottling: false })
+  win.setMenu(null);
 
   // and load the index.html of the app.
   win.loadURL(url.format({
@@ -19,7 +19,7 @@ function createWindow () {
   }))
 
   // Open the DevTools.
-  win.webContents.openDevTools()
+  //win.webContents.openDevTools()
 
   // Emitted when the window is closed.
   win.on('closed', () => {
@@ -35,9 +35,10 @@ function createWindow () {
 // Some APIs can only be used after this event occurs.
 app.on('ready', function(err,res){
     createWindow();
+    win.setAlwaysOnTop(false);
 });
 
-console.log(process.version);
+//console.log(process.version);
 
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {
