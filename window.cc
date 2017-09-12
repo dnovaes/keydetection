@@ -88,14 +88,14 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
   int height = GetSystemMetrics(SM_CYSCREEN);
 
   //WS_MAXIMIZE, WS_VISIBLE, WS_POPUPWINDOW
+/*
   HWND hWnd = CreateWindow(wc.lpszClassName, _T("LeftClick on your screen corners"),
       (WS_VISIBLE| WS_POPUPWINDOW), 0, 0, width, height, NULL, NULL, wc.hInstance, NULL);
-/*
-  HWND hWnd = CreateWindowEx(
-		0, wc.lpszClassName, _T("LeftClick on your screen corners"),
-   (WS_POPUPWINDOW | WS_VISIBLE | WS_EX_TOPMOST), 0, 0,
-  	width, height, NULL, NULL, wc.hInstance, NULL);
 */
+  HWND hWnd = CreateWindowEx(
+		WS_EX_TOPMOST, wc.lpszClassName, _T("LeftClick on your screen corners"),
+   (WS_POPUPWINDOW | WS_VISIBLE ), 0, 0,
+  	width, height, NULL, NULL, wc.hInstance, NULL);
 
   if (!hWnd){
     MessageBox(NULL,
@@ -105,6 +105,10 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
     return 1;
   }
 
+  SetFocus(hWnd);
+  BringWindowToTop(hWnd);
+  SetActiveWindow(hWnd);
+  EnableWindow(hWnd, true);
   MSG msg;
 
   //HBRUSH brush = CreateSolidBrush(RGB(0, 0, 255));
@@ -165,6 +169,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
         InvalidateRect(hWnd, NULL, TRUE); //force a WM_PAINT message and updates the window
         break;
       */
+      case WM_KILLFOCUS:
+        SetFocus(hWnd);
+        BringWindowToTop(hWnd);
+        SetActiveWindow(hWnd);
+        EnableWindow(hWnd, true);
+        break;
       case WM_KEYDOWN:
         //ptLCrelease indicates pos of mouse movement
         POINT lp;
@@ -206,14 +216,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
         {
           fbtDown = false;
           fDraw = false;
+          fprtScreen = FALSE;
           break;
         }
       case WM_MOUSEMOVE:
         {
           //ptLCrelease indicates pos of mouse movement
-          //+1 is an adjustment to fit with the same way as Sharex program;
-          ptLCrelease.x = (GET_X_LPARAM(lParam))+1;
-          ptLCrelease.y = (GET_Y_LPARAM(lParam))+1;
+          ptLCrelease.x = (GET_X_LPARAM(lParam));
+          ptLCrelease.y = (GET_Y_LPARAM(lParam));
           if(fbtDown){
             fDraw = true;
           }
@@ -224,8 +234,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
         {
           hdc = BeginPaint(hWnd, &ps);
           HPEN hPen;
-
-          TextOut(hdc,5, 5, greeting, _tcslen(greeting));
 
           if(!fprtScreen){
             CaptureAnImage(hWnd);
@@ -291,8 +299,6 @@ void drawMagnefier(HWND hWnd, HDC hdcMem){
   GetClientRect(hWnd, &rcClient);
 
   POINT dMagnefier;
-  dMagnefier.x = rcClient.right/10;
-  dMagnefier.y = rcClient.bottom/10;
 
   //nSamples/2 is the distance from the corner to the center
   for(i=0;i<nSamples;i++){ //lines
@@ -302,6 +308,10 @@ void drawMagnefier(HWND hWnd, HDC hdcMem){
         //ligthen tose pixels
         cPixel = RGB(GetRValue(cPixel)*1.7, GetGValue(cPixel)*1.7, GetBValue(cPixel)*1.7);
       }
+      if(ptLCrelease.x>rcClient.right/2){ dMagnefier.x = -rcClient.right/10; }
+      if(ptLCrelease.x<rcClient.right/2){ dMagnefier.x = rcClient.right/10; }
+      if(ptLCrelease.y>rcClient.bottom/2){ dMagnefier.y = -rcClient.bottom/10; }
+      if(ptLCrelease.y<rcClient.bottom/2){ dMagnefier.y = rcClient.bottom/10; }
       paintPixels(hdcMem, dMagnefier.x, dMagnefier.y, cPixel, i, j);
     }
   }
@@ -488,9 +498,9 @@ int CaptureAnImage(HWND hWnd)
     //The source DC is the entire screen and the destination DC is the current window (HWND)
     //if(!StretchBlt(hdcWindow,
     if(!BitBlt(hdcWindow,
-               0,0,
-               rcClient.right-1, rcClient.bottom-1,
-               hdcScreen, 1, 1,
+               0, 0,
+               rcClient.right, rcClient.bottom,
+               hdcScreen, 0, 0,
                SRCCOPY))
     {
         MessageBox(hWnd, _T("StretchBlt has failed"), _T("Failed"), MB_OK);
@@ -513,7 +523,7 @@ int CaptureAnImage(HWND hWnd)
     // Bit block transfer into our compatible memory DC.
     if(!BitBlt(hdcMemDC,
                0,0,
-               rcClient.right-rcClient.left, rcClient.bottom-rcClient.top,
+               rcClient.right, rcClient.bottom,
                hdcWindow,
                0,0,
                SRCCOPY))
