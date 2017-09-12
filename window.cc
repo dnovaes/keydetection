@@ -32,16 +32,18 @@ struct Work{
   Persistent<Function> callback;
 };
 
-typedef struct pos pos;
-struct pos{
+typedef struct vec vec;
+struct vec{
   int x;
   int y;
+  int w;
+  int h;
 };
 
-typedef struct sygPos sygPos;
-struct sygPos{
+typedef struct sygData sygData;
+struct sygData{
   uv_work_t req;
-  pos arrayPos[2];
+  vec data;
 };
 
 #define TIMER_ID 1
@@ -75,20 +77,8 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
   wc.lpszClassName = _T("window");
   wc.lpfnWndProc = WndProc;
 
-  /*[] (HWND window, UINT message, WPARAM
-    wparam, LPARAM lparam) -> LRESULT
-  {
-    if (WM_DESTROY == message)
-    {
-      PostQuitMessage(0);
-      return 0;
-    }
-    return DefWindowProc(window, message, wparam, lparam);
-  };
-  */
   RegisterClass(&wc);
 
-  Work *work = static_cast<Work*>(req->data);
   //Local<Number> val = Number::New(isolate, 1);
   //Handle<Value> argv[] = {val};
   //execute the callback
@@ -127,6 +117,10 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
 
   //SetTimer(hWnd, TIMER_ID, 50, (TIMERPROC) NULL);
 
+  Work *work = static_cast<Work*>(req->data);
+  sygData obj;
+  sygData *pobj;
+  pobj=&obj;
   while(TRUE){
   //while(GetMessage(&msg, 0, 0, 0) > 0){
     while(PeekMessage(&msg, hWnd, 0, 0, PM_REMOVE)){
@@ -137,21 +131,23 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
     // hWnd: the value returned from CreateWindow
     // nCmdShow: the fourth parameter from WinMain
     //ShowWindow(hWnd, nCmdShow);
-    //InvalidateRect(hWnd, NULL, TRUE); //force a WM_PAINT message and updates the window
-    //SetForegroundWindow
-    //UpdateWindow(hWnd);
-    //RedrawWindow(hWnd, NULL, NULL, RDW_UPDATENOW);
 
     if(msg.message == WM_QUIT){
-      CloseWindow(hWnd);
-      DestroyWindow(hWnd);
-      //break;
+      break;
     }
     if(((msg.message == WM_KEYDOWN)&&(msg.wParam == VK_ESCAPE))||(msg.message == WM_LBUTTONUP)){
-      //PostQuitMessage(0);
-      work->async.data = (void*) req;
+      pobj->req = *req;
+      pobj->data.x = ptLC.x;
+      pobj->data.y = ptLC.y;
+      pobj->data.w = ptLCrelease.x - ptLC.x;
+      pobj->data.h = ptLCrelease.y - ptLC.y;
+
+      work->async.data = (void*)pobj;
       uv_async_send(&work->async);
-      PostQuitMessage(1);
+      //CloseWindow(hWnd);
+      //kill process window by force
+      DestroyWindow(hWnd);
+      break;
     }
   }
   return (int) msg.wParam;
@@ -174,7 +170,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
         POINT lp;
         switch(wParam){
           case VK_ESCAPE:
-            PostQuitMessage(0);
+            //PostQuitMessage(0);
             break;
           case VK_LEFT:
             GetCursorPos(&lp);
@@ -494,7 +490,7 @@ int CaptureAnImage(HWND hWnd)
     if(!BitBlt(hdcWindow,
                0,0,
                rcClient.right-1, rcClient.bottom-1,
-               hdcScreen, 0, 0,
+               hdcScreen, 1, 1,
                SRCCOPY))
     {
         MessageBox(hWnd, _T("StretchBlt has failed"), _T("Failed"), MB_OK);
@@ -621,18 +617,17 @@ void sendSygnalResolution(uv_async_t *handle) {
   Isolate* isolate = Isolate::GetCurrent();
   v8::HandleScope handleScope(isolate);
 
-  sygPos *pobj = ((sygPos*) handle->data);
+  sygData *pobj = ((sygData*) handle->data);
   uv_work_t req = ((uv_work_t) pobj->req);
   Work *work = static_cast<Work*> (req.data);
 
   Local<Object> obj = Object::New(isolate);
-  obj->Set(String::NewFromUtf8(isolate, "x"), Number::New(isolate, pobj->arrayPos[0].x));
-  obj->Set(String::NewFromUtf8(isolate, "y"), Number::New(isolate, pobj->arrayPos[0].y));
-  obj->Set(String::NewFromUtf8(isolate, "w"), Number::New(isolate, pobj->arrayPos[0].w));
-  obj->Set(String::NewFromUtf8(isolate, "h"), Number::New(isolate, pobj->arrayPos[0].h));
+  obj->Set(String::NewFromUtf8(isolate, "x"), Number::New(isolate, pobj->data.x));
+  obj->Set(String::NewFromUtf8(isolate, "y"), Number::New(isolate, pobj->data.y));
+  obj->Set(String::NewFromUtf8(isolate, "w"), Number::New(isolate, pobj->data.w));
+  obj->Set(String::NewFromUtf8(isolate, "h"), Number::New(isolate, pobj->data.h));
 
-  Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  Handle<Value> argv[] = {obj};
   //execute the callback
   Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
 
