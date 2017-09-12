@@ -657,6 +657,6 @@ void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "getScreenResolution", getScreenResoAsync);
 }
 
-NODE_MODULE(addon, init)
+NODE_MODULE(sharex, init)
 
 }  // namespace windowAddon
