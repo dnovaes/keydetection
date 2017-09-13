@@ -84,24 +84,41 @@ body{
 }
 
 .coord_field{
-  width: 40px;
+  width: 35px;
+  height: 8px;
   box-shadow: -2px 2px 1px #e44d4d;
   padding: 3px;
   border: #443d3d solid thin;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .coord_label{
   color: white;
   font-family: pokemonh;
-  font-size: 17px;
+  font-size: 12px;
   font-weight: bold;
+  display: block;
+  float: left;
+  width: 20px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.coord_element{
+  width: 70px;
+  height: 23px;
+  line-height: 23px;
+  float: left;
 }
 
 #coord_span{
-  height: 35px;
+  width: 140px;
+  height: 50px;
+/*
   line-height: 35px;
-  margin-left: 10px;
-  display: inline;
+*/
+  float: right;
 }
 
 #console-title{
