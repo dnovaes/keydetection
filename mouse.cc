@@ -150,7 +150,7 @@ static void getColorFishing(uv_work_t *req){
 
   Work *work = static_cast<Work*>(req->data);
   int i=0;
-  int NSAMPLES = 70;
+  int NSAMPLES = 80;
 
   SetCursorPos(work->pos.x, work->pos.y);
 
