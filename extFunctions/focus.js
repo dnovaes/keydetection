@@ -1,6 +1,6 @@
-//hello.js
-const addon = require("./build/Release/addon");
 
-addon.focusWindow(function(res){
+const focus = require("./build/Release/focus");
+
+focus.focusWindow(function(res){
   console.log("Screen PXG focused.");
 });

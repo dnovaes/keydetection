@@ -108,8 +108,28 @@ static void focusWindow(uv_work_t *req){
 
   //LPSTR pcmdLine = wtext;
   HWND hWndPXG = SelectWindowByProcessName("pxgclient.exe");
+  //check if window game is minimized
+  if(IsIconic(hWndPXG)){
+    //press Enter to restore window to previous pos
+    OpenIcon(hWndPXG);
+  }
+
   SetForegroundWindow(hWndPXG);
-  //while(SetForegroundWindow(hWndPXG)==0){}
+  Sleep(100);
+/*
+  SetFocus(hWndPXG);
+  SetActiveWindow(hWndPXG);
+  EnableWindow(hWndPXG, true);
+
+  HWND hWnd = GetFocus();
+  printf("GetFocus: %p\n", hWnd);
+
+  hWnd = GetActiveWindow();
+  printf("GetActiveWindow: %p\n", hWnd);
+
+  hWnd = GetForegroundWindow();
+  printf("GetForegroundWindow: %p\n", hWnd);
+*/
 }
 
 static void focusWindowComplete(uv_work_t *req, int status){
