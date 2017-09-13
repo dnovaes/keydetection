@@ -17,13 +17,14 @@ var sqm = {
   "height": 0
 }
 
+var fBtnScreenCoords = 0;
 var printlog = console.log;
 
 var console = {}
 console.log = function(arg){
   var divConsole = document.getElementById("console");
   if(typeof(arg) == 'object'){
-    printlog("object!");
+    printlog("object! it wont show on console.");
   }else{
     if(document.getElementById("console").innerText == ""){
       divConsole.innerHTML = arg;
@@ -35,7 +36,6 @@ console.log = function(arg){
   printlog(arg);
 }
 
-//document.querySelector("#tabela-pacientes");
 divFishing = document.getElementById("fishing");
 divFishing.addEventListener("click", function(){
     divFishing.style.background = 'linear-gradient(red, #774247)';
@@ -48,14 +48,25 @@ divFishing.addEventListener("click", function(){
 
 divScreenCoords = document.getElementById("screenCoords");
 divScreenCoords.addEventListener("click", function(){
-    win.minimize();
-    //win.blur();
-    //win.blurWebView();
-    //win.setFocusable(false);
-    sharexNode.getScreenResolution(function(res){
-      printlog(res);
-      //win.show();
-    });
+    if(!fBtnScreenCoords){
+      fBtnScreenCoords = 1;
+
+      //select game window
+      var spawn = require('child_process').spawn,
+      ls = spawn('node', ['extFunctions/focus.js']);
+
+      //when spawn finishes execution, activate getScreenResolution
+      ls.stdout.on('data', function (data) {
+        console.log(data);
+        win.minimize();
+        sharexNode.getScreenResolution(function(res){
+          console.log(res);
+          updateScreenCoords(res);
+          //#5db31c = green
+          fBtnScreenCoords = 0;
+        });
+      });
+    }
 });
 
 //var posFishing;
@@ -65,7 +76,42 @@ addon.registerHKF10Async(function(res){
 });
 
 //sqm's in the screen: 15x11
+function updateScreenCoords(res){
+  console.log("Calculating size of each sqm in screen: ");
 
+  res.x = parseInt(res.x);
+  res.y = parseInt(res.y);
+  res.w = parseInt(res.w);
+  res.h = parseInt(res.h);
+
+  var coordxEl = document.querySelector("input[name='coordx']");
+  coordxEl.value = res.x;
+
+  var coordyEl = document.querySelector("input[name='coordy']");
+  coordyEl.value = res.y;
+
+  var coordwEl = document.querySelector("input[name='coordw']");
+  coordwEl.value = res.w;
+
+  var coordhEl = document.querySelector("input[name='coordh']");
+  coordhEl.value = res.h;
+
+  //length and height for each SQM
+  sqm.length = res.w/15;
+  sqm.height = res.h/11;
+
+  console.log("Each sqm has "+sqm.length.toFixed(2)+" of length");
+  console.log("Each sqm has "+sqm.height.toFixed(2)+" of height");
+
+  console.log("Center: ");
+  center.x = res.x + res.w/2;
+  center.y = res.y + res.h/2;
+
+  console.log(center);
+}
+
+//sqm's in the screen: 15x11
+/*
 addon.getCursorPosition(function(res){
   console.log("Mouse position detected: ");
   console.log(res);
@@ -96,6 +142,7 @@ addon.getCursorPosition(function(res){
 
   console.log(center);
 });
+*/
 
 function prepareForFishing(){
   if(pause == true){
@@ -115,35 +162,44 @@ function startFishing(){
   console.log(" ");
   console.log("Start the Fishing!!!");
 
-  //move mouse to center
-  //mouse.setCursorPos(center, function(res){});
+  //select game window
+  var spawn = require('child_process').spawn,
+  ls = spawn('node', ['extFunctions/focus.js']);
 
-  //move mouse 2 sqm of distance to the right
-  coords.x = center.x+(2*sqm.length);
-  coords.y = center.y;
-  mouse.setCursorPos(coords, function(res){});
+  //when spawn finishes execution, activate getScreenResolution
+  ls.stdout.on('data', function (data) {
+    console.log(data);
 
-  //press keys CTRL + Z
-  keyboard.pressKbKey("Fishing", function (res){
-    //press LEFTCLICK of mouse
-    mouse.leftClick(function(res){});
-  });
+    //move mouse to center
+    //mouse.setCursorPos(center, function(res){});
 
+    //move mouse 2 sqm of distance to the right
+    coords.x = center.x+(2*sqm.length);
+    coords.y = center.y;
+    mouse.setCursorPos(coords, function(res){});
 
-  //wait for the change of color, press LEFTCLICK of mouse again
-  console.log("Waiting for fish....");
-  mouse.getColorFishing({
-    "x": coords.x, //center+2sqm to right
-    "y": center.y+(sqm.height/4)+4
-  },function(res){
-    console.log("Fishing Rod Pulled Up!!");
+    //press keys CTRL + Z
     keyboard.pressKbKey("Fishing", function (res){
-      //that is the last async function to execute.
-      //IF pause is not requested, continue Fishing
-      //recursevely call to Fish!
-      if(!pause){
-        setTimeout(startFishing, 1500);
-      }
+      //press LEFTCLICK of mouse
+      mouse.leftClick(function(res){});
+    });
+
+    //wait for the change of color, press LEFTCLICK of mouse again
+    console.log("Waiting for fish....");
+    mouse.getColorFishing({
+      "x": coords.x, //center+2sqm to right
+      "y": center.y+(sqm.height/4)+4
+    },function(res){
+      console.log("Fishing Rod Pulled Up!!");
+      keyboard.pressKbKey("Fishing", function (res){
+        //that is the last async function to execute.
+        //IF pause is not requested, continue Fishing
+        //recursevely call to Fish!
+        if(!pause){
+          setTimeout(startFishing, 1500);
+        }
+      });
     });
   });
+
 }
