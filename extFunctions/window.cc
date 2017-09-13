@@ -151,6 +151,6 @@ void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "focusWindow", focusWindowAsync);
 }
 
-NODE_MODULE(sharex, init)
+NODE_MODULE(focus, init)
 
 }  // namespace focusAddon
