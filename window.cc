@@ -79,11 +79,6 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
 
   RegisterClass(&wc);
 
-  //Local<Number> val = Number::New(isolate, 1);
-  //Handle<Value> argv[] = {val};
-  //execute the callback
-  //Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
-
   int width = GetSystemMetrics(SM_CXSCREEN);
   int height = GetSystemMetrics(SM_CYSCREEN);
 
@@ -104,11 +99,12 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
         NULL);
     return 1;
   }
-
+/*
   SetFocus(hWnd);
   BringWindowToTop(hWnd);
   SetActiveWindow(hWnd);
   EnableWindow(hWnd, true);
+*/
   MSG msg;
 
   RegisterHotKey(hWnd, 1, NULL, VK_LEFT);
@@ -119,7 +115,6 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
   //wc.hbrBackground    = (HBRUSH)(COLOR_WINDOW+1);
   //SetClassLongPtr(hWnd, GCLP_HBRBACKGROUND, reinterpret_cast<LONG_PTR>(brush));
 
-  //SetWindowLongPtr(hWnd, GWL_STYLE, 0);
   //SetWindowPos(hwnd01, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
   //ShowWindow(hWnd, SW_SHOW);
 
@@ -152,7 +147,6 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
 
       work->async.data = (void*)pobj;
       uv_async_send(&work->async);
-      //CloseWindow(hWnd);
       UnregisterHotKey(hWnd, 1);
       UnregisterHotKey(hWnd, 2);
       UnregisterHotKey(hWnd, 3);
@@ -199,10 +193,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
         }
         break;
       case WM_KILLFOCUS:
+        /*
         SetFocus(hWnd);
-        BringWindowToTop(hWnd);
         SetActiveWindow(hWnd);
         EnableWindow(hWnd, true);
+        */
+        SetForegroundWindow(hWnd);
         break;
       case WM_KEYDOWN:
         //ptLCrelease indicates pos of mouse movement
@@ -508,20 +504,6 @@ int CaptureAnImage(HWND hWnd)
 
     //This is the best stretch mode
     //SetStretchBltMode(hdcWindow,HALFTONE);
-
-    /*
-    char strMsg[MAX_PATH];
-    strcpy(strMsg, "rcClient.right: ");
-    x = std::to_string(rcClient.right);
-    strcat(strMsg, x.c_str());
-
-    strcat(strMsg, _T("\n rcClient.bottom: "));
-    y = std::to_string(rcClient.bottom);
-    strcat(strMsg, y.c_str());
-
-    TextOut(hdc, 5, 20, strMsg, _tcslen(greeting));
-    */
-
 
     //The source DC is the entire screen and the destination DC is the current window (HWND)
     //if(!StretchBlt(hdcWindow,
