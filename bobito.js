@@ -188,7 +188,7 @@ function startFishing(){
     console.log("Waiting for fish....");
     mouse.getColorFishing({
       "x": coords.x, //center+2sqm to right
-      "y": center.y+(sqm.height/4)+4
+      "y": center.y+(sqm.height/3)
     },function(res){
       console.log("Fishing Rod Pulled Up!!");
       keyboard.pressKbKey("Fishing", function (res){
