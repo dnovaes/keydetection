@@ -2,19 +2,23 @@
   "targets": [
     {
       "target_name": "addon",
-      "sources": [ "hello.cc" ]
+      "sources": [ "sourcecc/hello.cc" ]
     },
     {
       "target_name": "keyboard",
-      "sources": [ "keyboard.cc" ]
+      "sources": [ "sourcecc/keyboard.cc" ]
     },
     {
       "target_name": "mouse",
-      "sources": [ "mouse.cc" ]
+      "sources": [ "sourcecc/mouse.cc" ]
     },
     {
       "target_name": "sharex",
-      "sources": [ "window.cc" ]
+      "sources": [ "sourcecc/window.cc" ]
+    },
+    {
+      "target_name": "focus",
+      "sources": [ "sourcecc/focus.cc" ]
     }
   ]
 }
