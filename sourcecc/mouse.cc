@@ -85,7 +85,6 @@ void setCursorPosAsync(const FunctionCallbackInfo<Value>& args){
   work->callback.Reset(isolate, callback);
 
   //worker thread using libuv
-  //uv_async_init(uv_default_loop(), &work->async, sendSygnalCursorPos);
   uv_queue_work(uv_default_loop(), &work->request, setCursorPos, setCursorPosComplete);
 
   args.GetReturnValue().Set(Undefined(isolate));
