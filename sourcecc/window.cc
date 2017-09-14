@@ -332,10 +332,10 @@ void drawMagnefier(HWND hWnd, HDC hdcMem){
         //ligthen tose pixels
         cPixel = RGB(GetRValue(cPixel)*1.7, GetGValue(cPixel)*1.7, GetBValue(cPixel)*1.7);
       }
-      if(ptLCrelease.x>rcClient.right/2){ dMagnefier.x = -rcClient.right/10; }
-      if(ptLCrelease.x<rcClient.right/2){ dMagnefier.x = rcClient.right/10; }
-      if(ptLCrelease.y>rcClient.bottom/2){ dMagnefier.y = -rcClient.bottom/10; }
-      if(ptLCrelease.y<rcClient.bottom/2){ dMagnefier.y = rcClient.bottom/10; }
+      if(ptLCrelease.x>rcClient.right/2){ dMagnefier.x = -rcClient.right/4; }
+      if(ptLCrelease.x<rcClient.right/2){ dMagnefier.x = rcClient.right/4; }
+      if(ptLCrelease.y>rcClient.bottom/2){ dMagnefier.y = -rcClient.bottom/4; }
+      if(ptLCrelease.y<rcClient.bottom/2){ dMagnefier.y = rcClient.bottom/4; }
       paintPixels(hdcMem, dMagnefier.x, dMagnefier.y, cPixel, i, j);
     }
   }
