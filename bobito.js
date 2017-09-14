@@ -3,6 +3,7 @@ const addon = require("./build/Release/addon");
 const mouse = require("./build/Release/mouse");
 const keyboard = require("./build/Release/keyboard");
 const sharexNode = require("./build/Release/sharex");
+const focus = require("./build/Release/focus");
 const {remote} = require('electron')
 
 var win = remote.BrowserWindow.fromId(1);
@@ -51,14 +52,9 @@ divScreenCoords.addEventListener("click", function(){
     if(!fBtnScreenCoords){
       fBtnScreenCoords = 1;
 
-      //select game window
-      var spawn = require('child_process').spawn,
-      ls = spawn('node', ['extFunctions/focus.js']);
-
-      //when spawn finishes execution, activate getScreenResolution
-      ls.stdout.on('data', function (data) {
-        console.log(data);
+      focus.focusWindow(function(res){
         win.minimize();
+        //select game window
         sharexNode.getScreenResolution(function(res){
           console.log(res);
           updateScreenCoords(res);
@@ -163,12 +159,9 @@ function startFishing(){
   console.log("Start the Fishing!!!");
 
   //select game window
-  var spawn = require('child_process').spawn,
-  ls = spawn('node', ['extFunctions/focus.js']);
 
-  //when spawn finishes execution, activate getScreenResolution
-  ls.stdout.on('data', function (data) {
-    console.log(data);
+//  ls.stdout.on('data', function (data) {
+  focus.focusWindow(function(res){
 
     //move mouse to center
     //mouse.setCursorPos(center, function(res){});
@@ -196,6 +189,7 @@ function startFishing(){
         //IF pause is not requested, continue Fishing
         //recursevely call to Fish!
         if(!pause){
+          //restart fishing after some time
           setTimeout(startFishing, 1500);
         }
       });
