@@ -108,28 +108,36 @@ static void focusWindow(uv_work_t *req){
 
   //LPSTR pcmdLine = wtext;
   HWND hWndPXG = SelectWindowByProcessName("pxgclient.exe");
+
+  RegisterHotKey(hWndPXG, 99, NULL, 0x12); //VK_MENU = ALT
+
+  INPUT ip;
+  // Set up a generic keyboard event.
+  ip.type = INPUT_KEYBOARD;
+  ip.ki.wScan = 0; // hardware scan code for key
+  ip.ki.time = 0;
+  ip.ki.dwExtraInfo = 0;
+
+  // Press the "ALT" key
+  ip.ki.wVk = 0x12; // virtual-key code for the "ALT" key
+  ip.ki.dwFlags = 0; // 0 for key down
+  SendInput(1, &ip, sizeof(INPUT));
+
+  // Release the "ALT" key
+  ip.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
+  SendInput(1, &ip, sizeof(INPUT));
+
+  OpenIcon(hWndPXG);
   //check if window game is minimized
   if(IsIconic(hWndPXG)){
-    //press Enter to restore window to previous pos
+    //restore window to previous pos
     OpenIcon(hWndPXG);
   }
-
   SetForegroundWindow(hWndPXG);
+
+  UnregisterHotKey(hWndPXG, 99);
+
   Sleep(100);
-/*
-  SetFocus(hWndPXG);
-  SetActiveWindow(hWndPXG);
-  EnableWindow(hWndPXG, true);
-
-  HWND hWnd = GetFocus();
-  printf("GetFocus: %p\n", hWnd);
-
-  hWnd = GetActiveWindow();
-  printf("GetActiveWindow: %p\n", hWnd);
-
-  hWnd = GetForegroundWindow();
-  printf("GetForegroundWindow: %p\n", hWnd);
-*/
 }
 
 static void focusWindowComplete(uv_work_t *req, int status){
