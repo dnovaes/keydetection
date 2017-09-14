@@ -136,8 +136,6 @@ static void focusWindow(uv_work_t *req){
   SetForegroundWindow(hWndPXG);
 
   UnregisterHotKey(hWndPXG, 99);
-
-  Sleep(100);
 }
 
 static void focusWindowComplete(uv_work_t *req, int status){
