@@ -42,6 +42,10 @@ struct sygPos{
   pos arrayPos[2];
 };
 
+//global variables
+Work *workGPos;
+sygPos objG, *pobjG;
+
 void registerHotKeyF10(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
   //args.GetReturnValue().Set(String::NewFromUtf8(isolate, "world"));
@@ -158,14 +162,12 @@ void registerHKF10Async(const FunctionCallbackInfo<Value>& args){
 static void getCursorPos(uv_work_t *req){
 
   POINT pt;
-  Work *work = static_cast<Work*>(req->data);
+  workGPos = static_cast<Work*>(req->data);
   MSG msg = {0};
   unsigned int i=0;
-  sygPos obj;
-  sygPos * pobj;
   pos arPos[2];
 
-  pobj=&obj;
+  pobjG=&objG;
   if(RegisterHotKey(NULL, 1, NULL, 0x52)){
 
     while(GetMessage(&msg, NULL, 0, 0)){
@@ -185,7 +187,7 @@ static void getCursorPos(uv_work_t *req){
         obj->Set(String::NewFromUtf8(isolate, "green"), Number::New(isolate, _green));
         obj->Set(String::NewFromUtf8(isolate, "blue"), Number::New(isolate, _blue));
         */
-        obj.arrayPos[i] = arPos[i];
+        objG.arrayPos[i] = arPos[i];
 
         //int red = obj->Get(String::NewFromUtf8(isolate, "red"))->IntegerValue();
         //printf("Red: %d\n", red);
@@ -194,13 +196,11 @@ static void getCursorPos(uv_work_t *req){
 
         if(i==2){
           //Communication between threads(uv_work_t and uv_async_t);
-          obj.req = *req;
-          //printf("pointer req: %p\n", &pobj->req);
+          objG.req = *req;
 
-          work->async.data = (void*)&obj;
-          uv_async_send(&work->async);
+          workGPos->async.data = (void*)&objG;
+          uv_async_send(&workGPos->async);
 
-          Sleep(500);
           break;
         }
       }

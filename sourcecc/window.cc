@@ -67,6 +67,10 @@ void drawMagnefier(HWND hWnd, HDC hdcMem);
 void paintPixels(HDC hdcWindow, int dx, int dy, COLORREF cPixel, int xOffset, int yOffset);
 int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t *req);
 
+//global variables
+Work *workG;
+sygData objG, *pobjG;
+
 //int __stdcall winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
 //int __stdcall winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t *req){
 int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t *req){
@@ -120,10 +124,9 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
 
   //SetTimer(hWnd, TIMER_ID, 50, (TIMERPROC) NULL);
 
-  Work *work = static_cast<Work*>(req->data);
-  sygData obj;
-  sygData *pobj;
-  pobj=&obj;
+  workG = static_cast<Work*>(req->data);
+  
+  pobjG=&objG;
   while(TRUE){
   //while(GetMessage(&msg, 0, 0, 0) > 0){
     while(PeekMessage(&msg, hWnd, 0, 0, PM_REMOVE)){
@@ -139,14 +142,14 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
       break;
     }
     if(((msg.message == WM_KEYDOWN)&&(msg.wParam == VK_ESCAPE))||(msg.message == WM_LBUTTONUP)){
-      pobj->req = *req;
-      pobj->data.x = ptLC.x;
-      pobj->data.y = ptLC.y;
-      pobj->data.w = ptLCrelease.x - ptLC.x;
-      pobj->data.h = ptLCrelease.y - ptLC.y;
+      pobjG->req = *req;
+      pobjG->data.x = ptLC.x;
+      pobjG->data.y = ptLC.y;
+      pobjG->data.w = ptLCrelease.x - ptLC.x;
+      pobjG->data.h = ptLCrelease.y - ptLC.y;
 
-      work->async.data = (void*)pobj;
-      uv_async_send(&work->async);
+      workG->async.data = (void*)&objG;
+      uv_async_send(&workG->async);
       UnregisterHotKey(hWnd, 1);
       UnregisterHotKey(hWnd, 2);
       UnregisterHotKey(hWnd, 3);
