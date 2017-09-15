@@ -54,13 +54,20 @@ divScreenCoords.addEventListener("click", function(){
 
       focus.focusWindow(function(res){
         win.minimize();
-        //select game window
-        sharexNode.getScreenResolution(function(res){
-          console.log(res);
-          updateScreenCoords(res);
-          //#5db31c = green
-          fBtnScreenCoords = 0;
-        });
+
+        //while(win.isMinimized() == false){console.log("not minimized! looping\n");}
+
+        //timer for window to minimize
+        setTimeout(function(){
+          //select game window
+          //TODO: make a function later that checks if bot window is foreground before taking a screenshot
+          sharexNode.getScreenResolution(function(res){
+            console.log(res);
+            updateScreenCoords(res);
+            //#5db31c = green
+            fBtnScreenCoords = 0;
+          });
+        }, 50);
       });
     }
 });
@@ -169,31 +176,35 @@ function startFishing(){
     //move mouse 2 sqm of distance to the right
     coords.x = center.x+(2*sqm.length);
     coords.y = center.y;
-    mouse.setCursorPos(coords, function(res){});
+    mouse.setCursorPos(coords, function(res){
 
-    //press keys CTRL + Z
-    keyboard.pressKbKey("Fishing", function (res){
-      //press LEFTCLICK of mouse
-      mouse.leftClick(function(res){});
-    });
-
-    //wait for the change of color, press LEFTCLICK of mouse again
-    console.log("Waiting for fish....");
-    mouse.getColorFishing({
-      "x": coords.x, //center+2sqm to right
-      "y": center.y+(sqm.height/3)
-    },function(res){
-      console.log("Fishing Rod Pulled Up!!");
+      //press keys CTRL + Z
       keyboard.pressKbKey("Fishing", function (res){
-        //that is the last async function to execute.
-        //IF pause is not requested, continue Fishing
-        //recursevely call to Fish!
-        if(!pause){
-          //restart fishing after some time
-          setTimeout(startFishing, 1500);
-        }
+        //press LEFTCLICK of mouse
+        mouse.leftClick(function(res){});
+
+        //wait for the change of color, press LEFTCLICK of mouse again
+        console.log("Waiting for fish....");
+        mouse.getColorFishing({
+          "x": coords.x, //center+2sqm to right
+          "y": center.y+(sqm.height/3)
+        },function(res){
+          console.log("Fishing Rod Pulled Up!!");
+          keyboard.pressKbKey("Fishing", function (res){
+            //that is the last async function to execute.
+            //IF pause is not requested, continue Fishing
+            //recursevely call to Fish!
+            if(!pause){
+              //restart fishing after some time
+              setTimeout(startFishing, 1500);
+            }
+          });
+        });
       });
+
     });
+
+
   });
 
 }
