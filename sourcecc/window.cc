@@ -103,12 +103,10 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
         NULL);
     return 1;
   }
-/*
-  SetFocus(hWnd);
-  BringWindowToTop(hWnd);
-  SetActiveWindow(hWnd);
-  EnableWindow(hWnd, true);
-*/
+
+  //just in case WS_EX_TOPMOST doesnt works
+  SetForegroundWindow(hWnd);
+
   MSG msg;
 
   RegisterHotKey(hWnd, 1, NULL, VK_LEFT);
