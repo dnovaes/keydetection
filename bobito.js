@@ -3,7 +3,7 @@ const addon = require("./build/Release/addon");
 const mouse = require("./build/Release/mouse");
 const keyboard = require("./build/Release/keyboard");
 const sharexNode = require("./build/Release/sharex");
-const focus = require("./build/Release/focus");
+const focuscc = require("./build/Release/focus");
 const {remote} = require('electron')
 
 var win = remote.BrowserWindow.fromId(1);
@@ -52,13 +52,12 @@ divScreenCoords.addEventListener("click", function(){
     if(!fBtnScreenCoords){
       fBtnScreenCoords = 1;
 
-      focus.focusWindow(function(res){
+      focuscc.focusWindow(function(res){
         win.minimize();
 
-        //while(win.isMinimized() == false){console.log("not minimized! looping\n");}
+        while(win.isMinimized() == false){console.log("not minimized! looping\n");}
 
-        //timer for window to minimize
-        setTimeout(function(){
+        
           //select game window
           //TODO: make a function later that checks if bot window is foreground before taking a screenshot
           sharexNode.getScreenResolution(function(res){
@@ -67,7 +66,6 @@ divScreenCoords.addEventListener("click", function(){
             //#5db31c = green
             fBtnScreenCoords = 0;
           });
-        }, 50);
       });
     }
 });
@@ -80,8 +78,6 @@ addon.registerHKF10Async(function(res){
 
 //sqm's in the screen: 15x11
 function updateScreenCoords(res){
-  console.log("Calculating size of each sqm in screen: ");
-
   res.x = parseInt(res.x);
   res.y = parseInt(res.y);
   res.w = parseInt(res.w);
@@ -100,17 +96,16 @@ function updateScreenCoords(res){
   coordhEl.value = res.h;
 
   //length and height for each SQM
-  sqm.length = res.w/15;
-  sqm.height = res.h/11;
+  sqm.length = parseInt((res.w/15).toFixed(2));
+  sqm.height = parseInt((res.h/11).toFixed(2));
 
-  console.log("Each sqm has "+sqm.length.toFixed(2)+" of length");
-  console.log("Each sqm has "+sqm.height.toFixed(2)+" of height");
-
-  console.log("Center: ");
+  
+  console.log("Sqm: "+sqm.length+"x"+sqm.height);
+  
   center.x = res.x + res.w/2;
   center.y = res.y + res.h/2;
-
-  console.log(center);
+  
+  console.log("Screen Coords captured");
 }
 
 //sqm's in the screen: 15x11
@@ -168,7 +163,7 @@ function startFishing(){
   //select game window
 
 //  ls.stdout.on('data', function (data) {
-  focus.focusWindow(function(res){
+  focuscc.focusWindow(function(res){
 
     //move mouse to center
     //mouse.setCursorPos(center, function(res){});
