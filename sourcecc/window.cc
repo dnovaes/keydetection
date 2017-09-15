@@ -49,10 +49,6 @@ struct sygData{
 #define TIMER_ID 1
 #define NSAMPLESZOOM 17;
 const int CZOOMFACTOR=12;
-BOOL fDraw = FALSE;
-BOOL fbtDown= FALSE;
-BOOL fprtScreen = FALSE;
-POINT ptLC, ptLCrelease;
 
 //Foward declarations of functions included in this module
 LRESULT CALLBACK WndProc(
@@ -70,6 +66,10 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
 //global variables
 Work *workG;
 sygData objG, *pobjG;
+BOOL fDraw = FALSE;
+BOOL fbtDown= FALSE;
+BOOL fprtScreen = FALSE;
+POINT ptLC, ptLCrelease; //LC = cursor pt to where user leftclicked, LCrelease = current pos of cursor
 
 //int __stdcall winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
 //int __stdcall winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t *req){
@@ -104,9 +104,6 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
     return 1;
   }
 
-  //just in case WS_EX_TOPMOST doesnt works
-  //SetForegroundWindow(hWnd);
-
   MSG msg;
 
   RegisterHotKey(hWnd, 1, NULL, VK_LEFT);
@@ -139,15 +136,22 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
     if(msg.message == WM_QUIT){
       break;
     }
-    if(((msg.message == WM_KEYDOWN)&&(msg.wParam == VK_ESCAPE))||(msg.message == WM_LBUTTONUP)){
+    if(((msg.message == WM_KEYDOWN)&&(msg.wParam == VK_ESCAPE))||(msg.message == WM_LBUTTONUP)){  
       pobjG->req = *req;
       pobjG->data.x = ptLC.x;
       pobjG->data.y = ptLC.y;
-      pobjG->data.w = ptLCrelease.x - ptLC.x;
-      pobjG->data.h = ptLCrelease.y - ptLC.y;
+      pobjG->data.w = ptLCrelease.x - ptLC.x+1;
+      pobjG->data.h = ptLCrelease.y - ptLC.y+1;
 
       workG->async.data = (void*)&objG;
       uv_async_send(&workG->async);
+
+	  //unset global variables and Unset hotkey
+	  ptLC.x;
+	  fbtDown = false;
+      fDraw = false;
+      fprtScreen = false;
+
       UnregisterHotKey(hWnd, 1);
       UnregisterHotKey(hWnd, 2);
       UnregisterHotKey(hWnd, 3);
@@ -164,7 +168,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
 
     PAINTSTRUCT ps;
     HDC hdc;
-    TCHAR greeting[] = _T("Hello, World!");
     POINT lp;
 
     switch (msg){
@@ -177,21 +180,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
         switch(wParam){
           case 1: //arrow left
             GetCursorPos(&lp);
-            SetCursorPos(lp.x-1, lp.y);
+			lp.x = lp.x-1;
             break;
           case 2: //arrow up
             GetCursorPos(&lp);
-            SetCursorPos(lp.x, lp.y-1);
+			lp.y = lp.y-1;
             break;
           case 3: //arrow right
             GetCursorPos(&lp);
-            SetCursorPos(lp.x+1, lp.y);
+			lp.x = lp.x+1;
             break;
           case 4: //arrow down
             GetCursorPos(&lp);
-            SetCursorPos(lp.x, lp.y+1);
+			lp.y = lp.y+1;
             break;
         }
+		SetCursorPos(lp.x, lp.y);
+		if(!fbtDown){
+		  ptLC.x = lp.x;
+		  ptLC.y = lp.y;
+		}else{
+		  ptLCrelease.x = lp.x;
+		  ptLCrelease.y = lp.y;
+		}
         break;
       case WM_KILLFOCUS:
         /*
@@ -201,7 +212,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
         */
         SetForegroundWindow(hWnd);
         break;
-      case WM_KEYDOWN:
+      /*case WM_KEYDOWN:
         //ptLCrelease indicates pos of mouse movement
         switch(wParam){
           case VK_ESCAPE:
@@ -224,26 +235,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
             SetCursorPos(lp.x, lp.y+1);
             break;
         }
-        break;
+        break;*/
       case WM_LBUTTONDOWN:
         {
           fDraw = false;
-          ptLC.x = GET_X_LPARAM(lParam);
-          ptLC.y = GET_Y_LPARAM(lParam);
+          if(!ptLC.x){
+            ptLC.x = GET_X_LPARAM(lParam);
+            ptLC.y = GET_Y_LPARAM(lParam);
+          }
           fbtDown = true;
-
+		  InvalidateRect(hWnd, NULL, TRUE); //force a WM_PAINT message and updates the window
           //HINSTANCE hInstance = GetModuleHandle(NULL);
           //GetModuleFileName(hInstance, szFileName, MAX_PATH);
           //MessageBox(hWnd, strMsg, "LEFTCLICKED!", MB_OK | MB_ICONINFORMATION);
           break;
         }
-      case WM_LBUTTONUP:
+      /*case WM_LBUTTONUP:
         {
           fbtDown = false;
           fDraw = false;
-          fprtScreen = FALSE;
+          fprtScreen = false;
           break;
-        }
+        }*/
       case WM_MOUSEMOVE:
         {
           //ptLCrelease indicates pos of mouse movement
@@ -278,11 +291,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
             strcat(strMsg, var.c_str());
 
             strcat(strMsg, _T(" W: "));
-            var = std::to_string(ptLCrelease.x - ptLC.x);
+            var = std::to_string(ptLCrelease.x - ptLC.x+1);
             strcat(strMsg, var.c_str());
 
             strcat(strMsg, _T(" H: "));
-            var = std::to_string(ptLCrelease.y - ptLC.y);
+            var = std::to_string(ptLCrelease.y - ptLC.y+1);
             strcat(strMsg, var.c_str());
 
             TextOut(hdc, ptLC.x, ptLC.y-15, strMsg, _tcslen(strMsg));
@@ -343,11 +356,11 @@ void drawMagnefier(HWND hWnd, HDC hdcMem){
 
   char strMsg[MAX_PATH];
   strcpy(strMsg, _T("X: "));
-  std::string var = std::to_string(ptLCrelease.x);
+  std::string var = std::to_string(ptLCrelease.x+1);
   strcat(strMsg, var.c_str());
 
   strcat(strMsg, _T(" Y:  "));
-  var = std::to_string(ptLCrelease.y);
+  var = std::to_string(ptLCrelease.y+1);
   strcat(strMsg, var.c_str());
 
   TextOut(hdcMem, ptLCrelease.x-3*CZOOMFACTOR+dMagnefier.x,
@@ -460,7 +473,7 @@ bool LoadBMPIntoDC(HDC hDC, LPCTSTR bmpfile, HWND hWnd){
 	BITMAP bm;
 	GetObject ( hBmp, sizeof(bm), &bm );
 
-  drawMagnefier(hWnd, dcmem);
+	drawMagnefier(hWnd, dcmem);
 
 	// and blit it to the visible dc
 	if ( BitBlt ( hDC, 0, 0, bm.bmWidth, bm.bmHeight, dcmem,
