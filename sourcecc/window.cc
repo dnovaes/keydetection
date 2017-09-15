@@ -105,7 +105,7 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
   }
 
   //just in case WS_EX_TOPMOST doesnt works
-  SetForegroundWindow(hWnd);
+  //SetForegroundWindow(hWnd);
 
   MSG msg;
 
@@ -123,7 +123,7 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
   //SetTimer(hWnd, TIMER_ID, 50, (TIMERPROC) NULL);
 
   workG = static_cast<Work*>(req->data);
-  
+
   pobjG=&objG;
   while(TRUE){
   //while(GetMessage(&msg, 0, 0, 0) > 0){
