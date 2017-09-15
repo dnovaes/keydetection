@@ -136,6 +136,10 @@ static void focusWindow(uv_work_t *req){
   SetForegroundWindow(hWndPXG);
 
   UnregisterHotKey(hWndPXG, 99);
+  //sleep is necessary so windows can have time to setForeground and time to execute the next operation:
+  //i.e., to take the screenshot and see that the window was in foreground. Without that, next actions 
+  //waas processing almost at the same moment
+  Sleep(100);
 }
 
 static void focusWindowComplete(uv_work_t *req, int status){
