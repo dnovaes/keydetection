@@ -54,7 +54,7 @@ static void pressKbKey(uv_work_t *req){
     ip.ki.dwFlags = 0; // 0 for key press
     SendInput(1, &ip, sizeof(INPUT));
 
-    Sleep(500);
+    Sleep(300);
 
     // Release the "Z" key
     ip.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
