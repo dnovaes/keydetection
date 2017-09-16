@@ -4,8 +4,7 @@
   "description": "A companion for your PXG",
   "main": "index.js",
   "dependencies": {
-    "electron": "^1.8.0",
-    "electron-squirrel-startup": "^1.0.0"
+    "electron": "^1.8.0"
   },
   "devDependencies": {
     "electron-rebuild": "^1.6.0"
