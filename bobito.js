@@ -170,35 +170,38 @@ function startFishing(){
 
     //move mouse 2 sqm of distance to the right
     coords.x = center.x+(2*sqm.length);
-    coords.y = center.y;
+    coords.y = center.y+(sqm.height/3);
     mouse.setCursorPos(coords, function(res){
 
       //press keys CTRL + Z
       keyboard.pressKbKey("Fishing", function (res){
+
         //press LEFTCLICK of mouse
-        mouse.leftClick(function(res){});
+        mouse.leftClick(function(res){
 
-        //wait for the change of color, press LEFTCLICK of mouse again
-        console.log("Waiting for fish....");
-        mouse.getColorFishing({
-          "x": coords.x, //center+2sqm to right
-          "y": center.y+(sqm.height/3)
-        },function(res){
-          console.log("Fishing Rod Pulled Up!!");
-          keyboard.pressKbKey("Fishing", function (res){
-            //that is the last async function to execute.
-            //IF pause is not requested, continue Fishing
-            //recursevely call to Fish!
-            if(!pause){
-              //restart fishing after some time
-              setTimeout(startFishing, 1500);
-            }
-          });
-        });
-      });
+          //wait for the change of color, press CTRL+Z when the fish appears
+          console.log("Waiting for fish....");
+          mouse.getColorFishing({
+            "x": coords.x, "y": coords.y
+          },function(res){
+            console.log("Fishing Rod Pulled Up!!");
+            keyboard.pressKbKey("Fishing", function (res){
+              //that is the last async function to execute.
+              //IF pause is not requested, continue Fishing
+              //recursevely call to Fish!
+              if(!pause){
+                //restart fishing after some time
+                setTimeout(startFishing, 1500);
+              }
+            }); //keyboard. CTRLZ 2
 
-    });
+          }); //mouse.getCOlorFishing
 
+        }); //mouse.leftClick
+
+      }); //keyboard CTRLZ 1
+
+    }); //mouse.setCursorPos
 
   });
 

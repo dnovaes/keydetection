@@ -100,7 +100,7 @@ static void leftClick(uv_work_t *req){
   input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
   SendInput(1,&input,sizeof(INPUT));
 
-  Sleep(500);
+  Sleep(300);
 
   // left up
   ::ZeroMemory(&input,sizeof(INPUT));
@@ -149,11 +149,11 @@ static void getColorFishing(uv_work_t *req){
 
   Work *work = static_cast<Work*>(req->data);
   int i=0;
-  int NSAMPLES = 80;
+  int NSAMPLES = 90;
 
   SetCursorPos(work->pos.x, work->pos.y);
 
-  Sleep(8000);
+  Sleep(7000);
 
   while(i<NSAMPLES){
     HDC dc = GetDC(NULL);
