@@ -212,3 +212,17 @@ div.loginEl input{
 #bobitoBtn-text p{
   margin: 0px;
 }
+
+#close-icon{
+  float: right;
+  width: 13px;
+  height: 13px;
+  background-image: url("../img/close.png");
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0.3;
+}
+
+#close-icon:hover{
+  opacity: 1.2;
+}
