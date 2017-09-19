@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="css/login.css" >
+    <title>123791283123b12h321vg3v23h2vb3</title>
+  </head>
+  <body style="-webkit-app-region: drag">
+  <div id="container">
+    <div id="container-left">
+      <img src="img/trainerred.png" id="background_pkm">
+    </div>
+    <div id="container-right">
+      <div id="title">
+        <img src="img/title.png" id="img_title">
+      </div>
+      <div id="logindiv" style="-webkit-app-region: no-drag">
+        <div id="login_username" class="loginEl">
+          <label for="username" class="pkmtext">Username:</label>
+          <input name="username" class="pkmtext" style="font-size:13px;">
+        </div>
+        <div id="login_pass" class="loginEl">
+          <label for="pass" class="pkmtext">Password:</label>
+          <input name="pass" type="password" class="pkmtext">
+        </div>
+        <div id="login_button" class="pkmtext">
+          <img src="img/cynda.png" id="login_icon">
+          <p>Login !</p>
+        </div>
+      </div>
+      <div id="social-buttons" style="-webkit-app-region: no-drag">
+        <div id="discordBtn"></div>
+        <div id="bobitoBtn">
+          <div id="bobitoBtn-icon">
+          </div>
+          <div id="bobitoBtn-text" style="margin-top: 2px;">
+            <p style="font-family: cursive;">Visit our</p>
+            <p class="pkmtext" style="margin-top: -20px;">WEBSITE</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </body>
+  <!--<script type="text/javascript" src="bobito.js"></script>-->
+  <script type="text/javascript">
+    let loginBt = document.querySelector("#login_button");
+    let loginIcon = document.querySelector("#login_button img");
+
+    loginBt.addEventListener("mouseover", function(){
+      loginBt.style.border = '1px solid #198be3';
+      document.querySelector("#login_button p").style.color = "#198be3";
+    });
+
+    loginBt.addEventListener("mouseout", function(){
+      loginBt.style = '';
+      document.querySelector("#login_button p").style = "";
+    });
+
+    const {shell} = require('electron')
+
+    let discordBt = document.querySelector("#discordBtn");
+    discordBt.addEventListener("click", function(){
+      shell.openExternal('https://discord.gg/mCESYyK');
+    });
+  </script>
+</html>

@@ -1,0 +1,214 @@
+body{
+  -webkit-app-region: drag;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+#title{
+  margin-top: 15px;
+}
+
+#img_title{
+  width: 250px;
+}
+
+#container{
+  width: 450px;
+  margin: 0 auto;
+  height: 300px;
+  color: white;
+  background: red;
+  background: linear-gradient(#774247, red);
+  border: #333c3c solid 5px;
+}
+
+#container-left{
+  width: 180px;
+  height: 300px;
+  float: left;
+}
+
+#container-right{
+  width: 225px;
+  height: 300px;
+  float: left;
+}
+
+@keyframes redeyes{
+  0% {
+    content: url("../img/trainerred.png");
+    opacity:1;
+  }
+  33% {
+    content: url("../img/trainerred_right.png");
+    opacity:1;
+  }
+  66%{
+    content: url("../img/trainerred_sleep.png");
+    opacity:1;
+  }
+  100%{
+    content: url("../img/trainerred_sleep.png");
+    opacity:1;
+  }
+}
+
+#background_pkm{
+  animation-name: redeyes;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-duration: 5s;
+  animation-direction: alternate;
+  width: 100%;
+}
+
+.pkmtext{
+  font-family: pokemons;
+}
+
+.pkmtextH{
+  font-family: pokemonh;
+}
+
+#logindiv{
+  margin-left: 12px;
+}
+
+div.loginEl input{
+  display: block;
+  font-size: 20px;
+  width: 120px;
+  height: 25px;
+  line-height: 25px;
+  border-radius: 10px;
+  text-align: center;
+  margin-top: 10px;
+  float: right;
+}
+
+#login_button{
+  color: #cb1a1c;
+  //background: url(../img/textures_dark_vertical.jpg) repeat;
+  background: black;
+  background: linear-gradient(black, #aa0004);
+  width: 150px;
+  height: 25px;
+  line-height: 21px;
+  border-radius: 10px;
+  text-align: center;
+  padding-bottom: 5px;
+  margin: 5px auto;
+  cursor: pointer;
+}
+
+@font-face{
+  font-family: pokemonh;
+  src: url("Pokemon Hollow.ttf");
+}
+
+@font-face{
+  font-family: pokemons;
+  src: url("Pokemon Solid.ttf");
+}
+
+#title{
+  font-family: pokemonh;
+}
+
+.loginEl{
+  width: 225px;
+  height: 45px;
+  line-height: 45px;
+}
+
+#login_icon{
+  width: 30px;
+  height: auto;
+  float: left;
+  margin-left: 25px;
+}
+
+#login_button p{
+  display: block;
+  margin: 0px;
+  width: 70px;
+  height: 30px;
+  float: left;
+}
+
+@keyframes cf3FadeInOut {
+  0% {
+    content: url("../img/cyndablue.png");
+    opacity:1;
+  }
+  100% {
+    content: url("../img/cynda.png");
+    opacity:1;
+  }
+}
+
+#login_button img{
+  animation-name: cf3FadeInOut;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-duration: 0.5s;
+  animation-direction: alternate;
+}
+
+#social-buttons{
+  width: 260px;
+  height: 40px;
+  position: absolute;
+  top: 240px;
+}
+
+#social-buttons > div{
+  margin: 1px 3px;
+}
+
+#discordBtn{
+  background-image: url("../img/discordbanner.png");
+  background-size: contain;
+  width: 120px;
+  height: 40px;
+  cursor: pointer;
+  border-radius: 5px;
+  float: left;
+}
+
+#discordBtn:hover{
+  border: 1px solid white;
+}
+
+#bobitoBtn{
+  width: 115px;
+  height: 38px;
+  cursor: pointer;
+  border-radius: 5px;
+  border: 1px solid white;
+  float: left;
+}
+
+#bobitoBtn:hover{
+  border: 2px solid white;
+}
+
+#bobitoBtn-icon{
+  width: 40px;
+  height: 40px;
+  float: left;
+  background-image: url("../img/bobito_icon.png");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+#bobitoBtn-text{
+  font-size: 15px;
+  text-align: center;
+  width: 65px;
+  height: 35px;
+  float:left;
+}
+
+#bobitoBtn-text p{
+  margin: 0px;
+}
