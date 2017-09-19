@@ -7,6 +7,9 @@
   </head>
   <body style="-webkit-app-region: drag">
   <div id="container">
+
+    <div id="close-icon" style="-webkit-app-region: no-drag"></div>
+
     <div id="container-left">
       <img src="img/trainerred.png" id="background_pkm">
     </div>
@@ -44,6 +47,8 @@
   </body>
   <!--<script type="text/javascript" src="bobito.js"></script>-->
   <script type="text/javascript">
+    const {remote, shell} = require('electron');
+
     let loginBt = document.querySelector("#login_button");
     let loginIcon = document.querySelector("#login_button img");
 
@@ -57,11 +62,14 @@
       document.querySelector("#login_button p").style = "";
     });
 
-    const {shell} = require('electron')
-
     let discordBt = document.querySelector("#discordBtn");
     discordBt.addEventListener("click", function(){
       shell.openExternal('https://discord.gg/mCESYyK');
+    });
+
+    let closeIconDiv = document.querySelector("#close-icon");
+    closeIconDiv.addEventListener("click", function(){
+      remote.app.quit();
     });
   </script>
 </html>
