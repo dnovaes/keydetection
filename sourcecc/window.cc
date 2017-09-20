@@ -146,9 +146,9 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
       workG->async.data = (void*)&objG;
       uv_async_send(&workG->async);
 
-	  //unset global variables and Unset hotkey
-	  ptLC.x;
-	  fbtDown = false;
+      //unset global variables and Unset hotkey
+      ptLC.x = 0;
+      fbtDown = false;
       fDraw = false;
       fprtScreen = false;
 
