@@ -48,6 +48,7 @@
   <!--<script type="text/javascript" src="bobito.js"></script>-->
   <script type="text/javascript">
     const {remote, shell} = require('electron');
+    const crypto = require('crypto');
 
     let loginBt = document.querySelector("#login_button");
     let loginIcon = document.querySelector("#login_button img");
@@ -71,5 +72,43 @@
     closeIconDiv.addEventListener("click", function(){
       remote.app.quit();
     });
+
+    loginBt.addEventListener("click", function(){
+
+      document.body.style.cursor = "progress";
+
+      let username = document.querySelector("#login_username input").value;
+      let password = document.querySelector("#login_pass input").value;
+
+      if(username == "" || password == ""){
+        alert("Preencha todos os campos");
+      }else{
+        let hash = crypto.createHash('sha256');
+        password = hash.update(password).digest('hex').toString();
+
+        var xhttp = new XMLHttpRequest();
+
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            data = JSON.parse(xhttp.response);
+            console.log(xhttp);
+            if(data.fLogin == 1){
+              remote.getCurrentWindow().loadURL(`file://${__dirname}/index.html`);
+              remote.getCurrentWindow().setSize(460, 300);
+            }else{
+              alert("Username or Password incorrect");
+            }
+            document.body.style.cursor = "default";
+          }else if(this.status == 502){ //bad gateway
+            console.log(xhttp);
+          }
+        }
+        //xhttp.open("POST", "http://localhost:3000/gloin", true);
+        xhttp.open("POST", "http://bobito-cc.umbler.net/gloin", true);
+        xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        xhttp.send(`username=${username}&password=${password}`);
+      }
+    });
+
   </script>
 </html>
