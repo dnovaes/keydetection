@@ -3,3 +3,4 @@ build/*
 bin/*
 captureqwsx.bmp
 oldCode.txt
+.scratchpads/*
