@@ -191,7 +191,7 @@ async function lookForFighting(){
               return 1;
             });
             return 1; //async mode, this return will block the process to continue check for pokemon after found one
-          }else{
+          }else{ //res.near else
             //console.log("Pokemon NOT close");
             //console.log(`blCount: ${blCount}, lengthBl: ${lengthBl}`);
             //in case program didnt delete it or it was dead by another player
