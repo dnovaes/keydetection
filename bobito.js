@@ -189,7 +189,7 @@ async function lookForFighting(){
               return 1;
               console.log("testing return1");
             });
-
+            return 1; //async mode, this return will block the process to continue check for pokemon after found one
           }else{
             //console.log("Pokemon NOT close");
             //console.log(`blCount: ${blCount}, lengthBl: ${lengthBl}`);
@@ -336,18 +336,18 @@ function startFishing(){
     mouse.getColorFishing({
       "x": coords.x, "y": coords.y
     },function(res){
-      keyboard.pressKbKey("Fishing", function (res){
-        console.log("Fishing Rod Pulled Up!!");
-        //end of fishing
-        //IF pause is not requested, continue Fishing
-        //recursevely call to Fish!
-        if(!pause){
-          //restart fishing after some time (this time is necessary:
-          //time: w8 for fishing sqm end animation of fished up to
-          //"available to fish here"
-          setTimeout(startFishing, 1000);
-        }
-      }); //keyboard. CTRLZ 2
+      if(!pause){
+        keyboard.pressKbKey("Fishing", function (res){
+          console.log("Fishing Rod Pulled Up!!");
+          //end of fishing
+          //IF pause is not requested, continue Fishing
+          //recursevely call to Fish!
+            //restart fishing after some time (this time is necessary:
+            //time: w8 for fishing sqm end animation of fished up to
+            //"available to fish here"
+            setTimeout(startFishing, 1000);
+        }); //keyboard. CTRLZ 2
+      }
     }); //mouse.getColorFishing
   }); //focuscc.focusWIndow
 }
