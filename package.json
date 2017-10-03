@@ -4,7 +4,8 @@
   "description": "A companion for your PXG",
   "main": "index.js",
   "dependencies": {
-    "electron": "^1.8.0"
+    "async-lock": "^1.0.0",
+    "electron": "^1.8.1"
   },
   "devDependencies": {
     "electron-rebuild": "^1.6.0"
