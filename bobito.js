@@ -154,7 +154,7 @@ async function lookForFighting(){
             locktarget.acquire("locktarget", function(donetarget){
               lock.acquire("lockmouse", function(done){
                 if(battlePokelist[iBl]!=0){
-                  console.log(`\nlockmouse attack acquired! ${battlePokelist[iBl].addr}`);
+                  console.log(`lockmouse attack acquired! ${battlePokelist[iBl].addr}`);
                 }else{
                   done();
                   donetarget();
@@ -180,14 +180,15 @@ async function lookForFighting(){
                 donetarget();
               });
             }, function(err, ret){
+              fcheckChangeBlRestarted = 1;
+              setTimeout(lookForFighting, 1000);
+              /*
               console.log("lookforfighting finished [locktarget]");
               console.log(`is locktarget busy again? ${locktarget.isBusy()}`);
               if(!locktarget.isBusy()){
-                fcheckChangeBlRestarted = 1;
-                setTimeout(lookForFighting, 1000);
               }
+              */
               return 1;
-              console.log("testing return1");
             });
             return 1; //async mode, this return will block the process to continue check for pokemon after found one
           }else{
