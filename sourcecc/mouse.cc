@@ -36,7 +36,7 @@ static void setCursorPos(uv_work_t *req){
   Work *work = static_cast<Work*>(req->data);
 
   SetCursorPos(work->pos.x, work->pos.y);
-  printf("Mouse at pos: %d, %d\n", work->pos.x, work->pos.y);
+  Sleep(100);
 
   //work->async.data = (void*)&obj;
   //uv_async_send(&work->async);
@@ -100,7 +100,7 @@ static void leftClick(uv_work_t *req){
   input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
   SendInput(1,&input,sizeof(INPUT));
 
-  Sleep(300);
+  Sleep(100);
 
   // left up
   ::ZeroMemory(&input,sizeof(INPUT));
@@ -108,6 +108,7 @@ static void leftClick(uv_work_t *req){
   input.mi.dwFlags  = MOUSEEVENTF_LEFTUP;
   SendInput(1,&input,sizeof(INPUT));
 
+  Sleep(100);
 }
 
 static void leftClickComplete(uv_work_t *req, int status){
@@ -149,7 +150,7 @@ static void getColorFishing(uv_work_t *req){
 
   Work *work = static_cast<Work*>(req->data);
   int i=0;
-  int NSAMPLES = 90;
+  int NSAMPLES = 190;
 
   SetCursorPos(work->pos.x, work->pos.y);
 
@@ -178,7 +179,7 @@ static void getColorFishing(uv_work_t *req){
     _green[2] = GetGValue(_pixel[2]);
 
     ReleaseDC(NULL, dc);
-
+/*
     printf("Red: 0x%02x %d\n", _red[0], _red[0]);
     printf("Green: 0x%02x %d\n", _green[0], _green[0]);
     //printf("Blue: 0x%02x %d\n", _blue[0], _blue[0]);
@@ -190,6 +191,7 @@ static void getColorFishing(uv_work_t *req){
     printf("Green: 0x%02x %d\n", _green[2], _green[2]);
 
     printf("\n");
+*/
 
     if((_red[0] < 20 || _red[1] < 20)&&(_green[0] > 100 || _green[1] > 100)){
       i=NSAMPLES;
