@@ -9,7 +9,7 @@ const AsyncLock = require('async-lock');
 const {remote} = require('electron');
 
 //global vars
-var win = remote.BrowserWindow.fromId(1);
+//var win = remote.BrowserWindow.fromId(1);
 var pause = true;
 var battlePokelist = {};
 var searchPokeArr= ["Magikarp"];
@@ -67,18 +67,14 @@ divScreenCoords.addEventListener("click", function(){
       fBtnScreenCoords = 1;
 
       focuscc.focusWindow(function(res){
-        win.minimize();
+        //win.minimize();
 
-        while(win.isMinimized() == false){console.log("not minimized! looping\n");}
-
-          //select game window
-          //TODO: make a function later that checks if bot window is foreground before taking a screenshot
-          sharexNode.getScreenResolution(function(res){
-            console.log(res);
-            updateScreenCoords(res);
-            //#5db31c = green
-            fBtnScreenCoords = 0;
-          });
+        //select game window
+        sharexNode.getScreenResolution(function(res){
+          updateScreenCoords(res);
+          fBtnScreenCoords = 0;
+        });
+        //#5db31c = green
       });
     }
 });
@@ -118,7 +114,6 @@ var fLookForFighting = 0;
 let fightCounter = 0
 
 checkChangeBattlelist();
-//setInterval(function(){console.log(battlePokelist);}, 5000);
 
 //###########################################
 //              FUNCTIONS
@@ -227,16 +222,19 @@ async function lookForFighting(){
 //sqm's in the screen: 15x11
 function updateScreenCoords(res){
 
+/*  res = {"x":0, "y":0, "w":0, "h":0}
+
+  res.x = 324;
+  res.y = 174;
+  res.w = 402;
+  res.h = 293;
+*/
+
   res.x = parseInt(res.x);
   res.y = parseInt(res.y);
   res.w = parseInt(res.w);
   res.h = parseInt(res.h);
-/*
-  res.x = 904;
-  res.y = 133;
-  res.w = 518;
-  res.h = 380;
-*/
+
   var coordxEl = document.querySelector("input[name='coordx']");
   coordxEl.value = res.x;
 
@@ -248,6 +246,7 @@ function updateScreenCoords(res){
 
   var coordhEl = document.querySelector("input[name='coordh']");
   coordhEl.value = res.h;
+
 
   //length and height for each SQM
   sqm.length = parseInt((res.w/15).toFixed(2));
@@ -262,7 +261,6 @@ function updateScreenCoords(res){
   console.log("Screen Coords captured");
 
   bl.setScreenConfig(center, sqm, function(){
-
   });
 }
 
@@ -295,7 +293,7 @@ function startFishing(){
       console.log("\nlockmouse fishing acquired!");
       console.log("Start the Fishing!!!");
 
-      mouse.setCursorPos(coords, function(res){console.log("cursor at pos set");});
+      mouse.setCursorPos(coords, function(res){console.log(coords, "cursor at pos set");});
       bl.fish(function(res){console.log("fish clicked!");done();});
 //      keyboard.pressKbKey("Fishing", function (res){}); //keyboard CTRL+Z 1
 //      mouse.leftClick(function(res){ console.log("leftclicked!");done();});
