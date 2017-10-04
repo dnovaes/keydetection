@@ -6,7 +6,7 @@ const sharexNode = require("./build/Release/sharex");
 const focuscc = require("./build/Release/focus");
 const bl = require("./build/Release/battlelist");
 const AsyncLock = require('async-lock');
-const {remote} = require('electron')
+const {remote} = require('electron');
 
 //global vars
 var win = remote.BrowserWindow.fromId(1);
@@ -29,13 +29,10 @@ var fBtnScreenCoords = 0;
 
 //updateScreenCoords({});
 
-var printlog = console.log;
-
-var console = {}
-console.log = function(arg){
+var printlog = function(arg){
   var divConsole = document.getElementById("console");
   if(typeof(arg) == 'object'){
-    printlog("object! it wont show on console.");
+    console.log("object! it wont show on console.");
   }else{
     if(document.getElementById("console").innerText == ""){
       divConsole.innerHTML = arg;
@@ -44,7 +41,7 @@ console.log = function(arg){
     }
   }
   divConsole.scrollTop = divConsole.scrollHeight;
-  printlog(arg);
+  console.log(arg);
 }
 
 divFishing = document.getElementById("fishing");
@@ -85,6 +82,7 @@ addon.registerHKF10Async(function(res){
 });
 
 bl.getBattleList(function(res){
+  let i;
   switch(res.type){
     case -100:
       res.type = "NPC";
@@ -95,16 +93,25 @@ bl.getBattleList(function(res){
       break;
     case 112:
       res.type = "POKEMON";
-      battlePokelist[res.addr] = {"addr": res.addr, "name": res.name, "type": res.type}
+      if((battlePokelist[res.addr]==0)||(battlePokelist[res.addr]==undefined)){
+        for(i=0;i<searchPokeArr.length;i++){
+          if(searchPokeArr[i] == res.name){
+            console.log(res.addr, res.name);
+            battlePokelist[res.addr] = {"addr": res.addr, "name": res.name, "type": res.type}
+            break;
+          }
+        }
+      }
       break;
   }
   //console.log(res.addr.toString(16).toUpperCase(), res.name, res.type)
-  console.log(res.addr, res.name, res.type);
 });
 
 var fLookForFighting = 0;
 let fightCounter = 0
+
 checkChangeBattlelist();
+//setInterval(function(){console.log(battlePokelist);}, 5000);
 
 //###########################################
 //              FUNCTIONS
@@ -138,80 +145,75 @@ async function lookForFighting(){
 
   for (const iBl of currentBlist){
     blCount+=1;
-    for(i=0; i<searchPokeArr.length; i++){
-      if((battlePokelist[iBl]!= 0) && (battlePokelist[iBl].name == searchPokeArr[0])){
-        ftargetFound=1;
-        if(fcheckChangeBlRestarted == 1){
-          console.log("already fought and restarted function. finishing this call...");
-        }else{
-          //check if pokemon is near/close
-          console.log(`checking if ${battlePokelist[iBl].name} is near`);
-          const res = bl.isPkmNearSync(battlePokelist[iBl].addr);
-          if(res.isNear){
-            //:TODO add a check inside of isPkmNear to see if pkm was rly clicked, if not try again.
-            //attack and just return after pokemon is dead
-
-            locktarget.acquire("locktarget", function(donetarget){
-              lock.acquire("lockmouse", function(done){
-                if(battlePokelist[iBl]!=0){
-                  console.log(`lockmouse attack acquired! ${battlePokelist[iBl].addr}`);
-                }else{
-                  done();
-                  donetarget();
-                  return 0;
-                  console.log("testing return0");
-                }
-                //  console.log("lock2 fighting acquired!");
-                bl.attackPkm(battlePokelist[iBl].addr, function(){
+    if(battlePokelist[iBl]!= 0){
+      for(i=0; i<searchPokeArr.length; i++){
+        if(battlePokelist[iBl].name == searchPokeArr[i]){
+          if(fcheckChangeBlRestarted == 1){
+            console.log("already fought and restarted function. finishing this call...");
+          }else{
+            //check if pokemon is near/close
+            console.log(`checking if ${battlePokelist[iBl].name} is near`);
+            const res = bl.isPkmNearSync(battlePokelist[iBl].addr);
+            if(res.isNear){
+              //:TODO add a check inside of isPkmNear to see if pkm was rly clicked, if not try again.
+              //attack and just return after pokemon is dead
+              ftargetFound=1;
+              locktarget.acquire("locktarget", function(donetarget){
+                lock.acquire("lockmouse", function(done){
+                  if(battlePokelist[iBl]!=0){
+                    console.log(`lockmouse attack acquired! ${battlePokelist[iBl].addr}`);
+                  }else{
                     done();
+                    donetarget();
+                    console.log("fake target. was deleted during processing. will restart as lookForFighting in the doneTarget()");
+                  }
+                  //  console.log("lock2 fighting acquired!");
+                  bl.attackPkm(battlePokelist[iBl].addr, function(){
+                      done();
+                  });
+                }, function(err, ret){
+                  // lockmouse released
+                  console.log("lockmouse attack released! [pokemon selected]");
+                });
+
+                bl.waitForDeath(battlePokelist[iBl].addr, function(){
+                  console.log("pokemon is dead.");
+                  battlePokelist[iBl] = 0;
+    //              if((fcheckChangeBlRestarted == 0)&&(blCount == lengthBl)){
+                    //after pokmon dead, force a call to lookForfight to check if there is still
+                    //other pokemons to target
+    //              }
+                  donetarget();
                 });
               }, function(err, ret){
-                // lockmouse released
-                console.log("lockmouse attack released!");
+                fcheckChangeBlRestarted = 1;
+                setTimeout(lookForFighting, 1000);
+                /*
+                console.log("lookforfighting finished [locktarget]");
+                console.log(`is locktarget busy again? ${locktarget.isBusy()}`);
+                if(!locktarget.isBusy()){
+                }
+                */
+                return 1;
               });
-
-              bl.waitForDeath(battlePokelist[iBl].addr, function(){
-                console.log("pokemon is dead.");
-                battlePokelist[iBl] = 0;
-  //              if((fcheckChangeBlRestarted == 0)&&(blCount == lengthBl)){
-                  //after pokmon dead, force a call to lookForfight to check if there is still
-                  //other pokemons to target
-  //              }
-                donetarget();
-              });
-            }, function(err, ret){
-              fcheckChangeBlRestarted = 1;
-              setTimeout(lookForFighting, 1000);
-              /*
-              console.log("lookforfighting finished [locktarget]");
-              console.log(`is locktarget busy again? ${locktarget.isBusy()}`);
-              if(!locktarget.isBusy()){
-              }
-              */
-              return 1;
-            });
-            return 1; //async mode, this return will block the process to continue check for pokemon after found one
-          }else{ //res.near else
-            //console.log("Pokemon NOT close");
-            //console.log(`blCount: ${blCount}, lengthBl: ${lengthBl}`);
-            //in case program didnt delete it or it was dead by another player
-            //faraway from player screen
-            //if(res.isDead){
-            //  delete battlePokelist[iBl];
-            //}
+              return 1; //async mode, this return will block the process to continue check for pokemon after found one
+            }else{ //res.near else
+              //it was dead by other player, disappeared of screen or dead by a area skill
+              console.log("Pokemon NOT close");
+              battlePokelist[iBl]=0;
+              //in case program didnt delete it or it was dead by another player
+              //faraway from player screen
+            }
           }
         }
       }
     }
-    //when all the pokemons in battlePokelist isnt in list of target pokemons (searchPokeArr)
-    //it doesnt enter in the if and goes out of loop without restarting checkChangeBattlelist.
-    //its here when we check if this scenario happened
   }
-  fLookForFighting = 0;
   //no pokemons in the battlePokelist = restart check
   if((ftargetFound == 0) && (fcheckChangeBlRestarted == 0)){
-    checkChangeBattlelist();
+    fLookForFighting = 0;
     console.log("lookforfighting finished [notargetfound]");
+    checkChangeBattlelist();
   }
 }
 
@@ -222,14 +224,12 @@ function updateScreenCoords(res){
   res.y = parseInt(res.y);
   res.w = parseInt(res.w);
   res.h = parseInt(res.h);
-
 /*
   res.x = 904;
   res.y = 133;
-  res.w = 514;
-  res.h = 377;
+  res.w = 518;
+  res.h = 380;
 */
-
   var coordxEl = document.querySelector("input[name='coordx']");
   coordxEl.value = res.x;
 
@@ -259,39 +259,6 @@ function updateScreenCoords(res){
   });
 }
 
-//sqm's in the screen: 15x11
-/*
-addon.getCursorPosition(function(res){
-  console.log("Mouse position detected: ");
-  console.log(res);
-
-  console.log("Calculating size of each sqm in screen: ");
-
-  res.SE.x = parseInt(res.SE.x);
-  res.SE.y = parseInt(res.SE.y);
-  res.NW.x = parseInt(res.NW.x);
-  res.NW.y = parseInt(res.NW.y);
-
-  //temp: my client
-  res.SE.x = 1397;
-  res.SE.y = 598;
-  res.NW.x = 804;
-  res.NW.y = 163;
-
-  //length and height for each SQM
-  sqm.length = (res.SE.x - res.NW.x)/15;
-  sqm.height = (res.SE.y - res.NW.y)/11;
-
-  console.log("Each sqm has "+sqm.length.toFixed(2)+" of length");
-  console.log("Each sqm has "+sqm.height.toFixed(2)+" of height");
-
-  console.log("Center: ");
-  center.x = res.NW.x + (res.SE.x - res.NW.x)/2;
-  center.y = res.NW.y + (res.SE.y - res.NW.y)/2;
-
-  console.log(center);
-});
-*/
 
 function prepareForFishing(){
   if(pause == true){
@@ -308,9 +275,7 @@ function prepareForFishing(){
 function startFishing(){
   var coords = {"x":0, "y":0};
 
-
   //select game window
-
   //TODO: add focusWindow in every keyboard action later
   focuscc.focusWindow(function(res){
 
@@ -324,8 +289,9 @@ function startFishing(){
       console.log("Start the Fishing!!!");
 
       mouse.setCursorPos(coords, function(res){console.log("cursor at pos set");});
-      keyboard.pressKbKey("Fishing", function (res){}); //keyboard CTRL+Z 1
-      mouse.leftClick(function(res){ console.log("leftclicked!");done();});
+      bl.fish(function(res){console.log("fish clicked!");done();});
+//      keyboard.pressKbKey("Fishing", function (res){}); //keyboard CTRL+Z 1
+//      mouse.leftClick(function(res){ console.log("leftclicked!");done();});
 
     }, function(err, ret){
         console.log("lockmouse released");
@@ -342,11 +308,10 @@ function startFishing(){
           console.log("Fishing Rod Pulled Up!!");
           //end of fishing
           //IF pause is not requested, continue Fishing
-          //recursevely call to Fish!
-            //restart fishing after some time (this time is necessary:
-            //time: w8 for fishing sqm end animation of fished up to
-            //"available to fish here"
-            setTimeout(startFishing, 1000);
+          //restart fishing after some time (this time is necessary:
+          //time: w8 for fishing sqm end animation of fished up to
+          //"available to fish here"
+          setTimeout(startFishing, 1000);
         }); //keyboard. CTRLZ 2
       }
     }); //mouse.getColorFishing
