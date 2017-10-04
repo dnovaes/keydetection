@@ -27,6 +27,13 @@ var sqm = {
 var counterBattlelist = 168; //=0
 var fBtnScreenCoords = 0;
 
+remote.getCurrentWindow().on('close', (e) => {
+  bl.finishDebugging(function(res){
+    app.quit();
+  });
+  //win.hide();
+});
+
 //updateScreenCoords({});
 
 var printlog = function(arg){
