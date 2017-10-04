@@ -87,11 +87,14 @@ const DWORD_PTR OFFSET_PKM_POSX   = 0xC;
 const DWORD_PTR OFFSET_PKM_POSY   = 0x10;
 const DWORD_PTR OFFSET_PKM_POSZ   = 0x14;
 const DWORD_PTR OFFSET_PKM_LIFE   = 0x38;
-//pointer to battlelist counter active creatures
+//pointer to battlelist counter of active creatures
 const DWORD_PTR BASEADDR_BLACOUNT = 0x002EC820;
 const DWORD_PTR OFFSET_BLCOUNT_P1 = 0x33C;
 const DWORD_PTR OFFSET_BLCOUNT_P2 = 0xA4;
 const DWORD_PTR OFFSET_BLCOUNT_P3 = 0x30;
+const DWORD_PTR BASEADDR_FISHING  = 0x002EC83C;
+const DWORD_PTR OFFSET_FISHING_P1 = 0x54;
+const DWORD_PTR OFFSET_FISHING_P2 = 0x4;
 
 
 DWORD GetProcessThreadID(DWORD pID);
@@ -219,9 +222,6 @@ static void printBattleList(uv_work_t *req){
 
   //adress to put a breakpoint
   DWORD_PTR address = moduleAddr+0x9D82C; // pxgclient
-  //DWORD address = moduleAddr+0x2A84F; // #mine
-  printf("get value of eax in 0x%llX\n", address);
-
   BOOL fDebugActive = DebugActiveProcess(pid); // PID of target process
   printf("permission for debug: %d\n", fDebugActive);
 
@@ -259,7 +259,8 @@ static void printBattleList(uv_work_t *req){
     GetThreadContext(hThread, &ctx);
 
     //ctx.Dr0 = address;
-    ctx.Dr0 = moduleAddr+0xD73C0;
+    //ctx.Dr0 = moduleAddr+0xD73C0;
+    ctx.Dr0 = moduleAddr+0xC16EE;
     ctx.Dr7 = 0x00000001;
 
     SetThreadContext(hThread, &ctx);
@@ -332,8 +333,8 @@ static void printBattleList(uv_work_t *req){
           ||
           dbgEvent.u.Exception.ExceptionRecord.ExceptionCode == 0x4000001E //Single Step WOW
         )){
-        if(dbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == (LPVOID)(moduleAddr+0xD73C0)){
-        //}else if(dbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == (LPVOID)msvcrt_strcmpAddr){
+        //if(dbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == (LPVOID)(moduleAddr+0xD73C0)){
+        if(dbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == (LPVOID)(moduleAddr+0xC16EE)){
             fBKcount++;
             printf("BK: %d ", fBKcount);
 
@@ -341,11 +342,8 @@ static void printBattleList(uv_work_t *req){
             ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS | CONTEXT_INTEGER | CONTEXT_CONTROL;
             GetThreadContext(hThread, &ctx);
 
-            //printf("Exception breakpoint trigged! creature data READY.\n");
-            entityAddr = (DWORD_PTR)ctx.Edx; // get Eax
-            //entityAddr = (DWORD_PTR)ctx.Rdx; // get Eax
-
-            //printCreature(pid, entityAddr);
+            //entityAddr = (DWORD_PTR)ctx.Edx; // get Eax
+            entityAddr = (DWORD_PTR)ctx.Ecx; // get Ecx
 
             work->creatureAddr = entityAddr;
             while(mutex == 0){
@@ -356,7 +354,8 @@ static void printBattleList(uv_work_t *req){
             entityAddr = 0x0;
 
             //ctx.Dr0 = address;
-            ctx.Dr0 = moduleAddr+0xD73C3;
+            //ctx.Dr0 = moduleAddr+0xD73C3;
+            ctx.Dr0 = moduleAddr+0xC16F0;
             ctx.Dr7 = 0x00000001;
 
             while(mutex == 0){
@@ -367,13 +366,13 @@ static void printBattleList(uv_work_t *req){
             SetThreadContext(hThread, &ctx);
             ResumeThread(hThread);
             //fBreakPoint = TRUE;
-        }else if(dbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == (LPVOID)(moduleAddr+0xD73C3)){
+        }else if(dbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == (LPVOID)(moduleAddr+0xC16F0)){
             //update breakpoint
             SuspendThread(hThread);
             ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS | CONTEXT_INTEGER | CONTEXT_CONTROL;
             GetThreadContext(hThread, &ctx);
 
-            ctx.Dr0 = moduleAddr+0xD73C0;
+            ctx.Dr0 = moduleAddr+0xC16EE;
             ctx.Dr7 = 0x00000001;
 
             SetThreadContext(hThread, &ctx);
@@ -897,6 +896,103 @@ void setScreenConfigSync(const FunctionCallbackInfo<Value>& args){
   args.GetReturnValue().Set(val);
 }
 
+static void fish(uv_work_t *req){
+  Work *work = static_cast<Work*>(req->data);
+  INPUT input;
+  byte fishing = 2;
+  HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+  int i=-1;
+
+  do{
+    i++;
+    // Set up a generic keyboard event.
+    input.type = INPUT_KEYBOARD;
+    input.ki.wScan = 0; // hardware scan code for key
+    input.ki.time = 0;
+    input.ki.dwExtraInfo = 0;
+
+    // Press the "CTRL" key
+    input.ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+    input.ki.dwFlags = 0; // 0 for key press
+    SendInput(1, &input, sizeof(INPUT));
+
+    // Press the "Z" key
+    input.ki.wVk = 0x5A; // virtual-key code for the "Z" key
+    input.ki.dwFlags = 0; // 0 for key press
+    SendInput(1, &input, sizeof(INPUT));
+
+    Sleep(100);
+
+    // Release the "Z" key
+    input.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
+    SendInput(1, &input, sizeof(INPUT));
+
+    // Release the "CTRL" key
+    input.ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+    input.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
+    SendInput(1, &input, sizeof(INPUT));
+
+    Sleep(100);
+
+    //LEFT CLICK
+    // left down
+    input.type      = INPUT_MOUSE;
+    input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
+    SendInput(1,&input,sizeof(INPUT));
+
+    Sleep(100);
+
+    // left up
+    ::ZeroMemory(&input,sizeof(INPUT));
+    input.type      = INPUT_MOUSE;
+    input.mi.dwFlags  = MOUSEEVENTF_LEFTUP;
+    SendInput(1,&input,sizeof(INPUT));
+
+    Sleep(400);
+
+    DWORD address;
+
+    ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_FISHING), &address, sizeof(DWORD), NULL);
+    ReadProcessMemory(handle, (LPDWORD)(address+OFFSET_FISHING_P1), &address, sizeof(DWORD), NULL);
+    ReadProcessMemory(handle, (LPDWORD)(address+OFFSET_FISHING_P2), &fishing, 1, NULL);
+    printf("Fish Status: %d\n", fishing);
+  }while((fishing != 3)&&(i<2)); //3 = fishing, 2 = normal
+
+  CloseHandle(handle);
+}
+
+static void fishComplete(uv_work_t *req, int status){
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+  Work *work = static_cast<Work*>(req->data);
+
+  Local<Number> val = Number::New(isolate, 1);
+  Handle<Value> argv[] = {val};
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
+  //Free up the persistent function callback
+  work->callback.Reset();
+  delete work;
+}
+
+void fishAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  Work* work = new Work();
+  work->request.data = work;
+
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[0]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  uv_queue_work(uv_default_loop(), &work->request, fish, fishComplete);
+
+  Local<Number> val = Number::New(isolate, 1);
+  args.GetReturnValue().Set(val);
+}
+
 void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "setScreenConfig", setScreenConfigSync);
   NODE_SET_METHOD(exports, "getBattleList", printBattleListAsync);
@@ -906,6 +1002,7 @@ void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "waitForDeath", waitForDeathAsync);
   NODE_SET_METHOD(exports, "attackPkm", attackPkmAsync);
   NODE_SET_METHOD(exports, "checkChangeBattlelist", checkChangeBlAsync);
+  NODE_SET_METHOD(exports, "fish", fishAsync);
 }
 
 NODE_MODULE(sharex, init)
