@@ -73,8 +73,10 @@ char mutex = 1; //1 = continue
 uv_rwlock_t numlock;
 BOOL fDebugWhileEvent = FALSE;
 DWORD pid;
+DWORD dwThreadID;
 DWORD_PTR moduleAddr;
 POINT center, sqm;
+HANDLE hThread;
 
 //const
 //use moduleAddress as base
@@ -145,6 +147,31 @@ int privileges(){
   return 1;
 }
 
+void signal_callback_handler(int signum)
+{
+  //printf("Caught signal %d\n",signum);
+  // Cleanup and close up stuff here
+  //
+  CONTEXT ctx = {0};
+
+  SuspendThread(hThread);
+  ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS | CONTEXT_INTEGER | CONTEXT_CONTROL;
+  GetThreadContext(hThread, &ctx);
+
+  ctx.Dr0 = 0x00000000;
+  ctx.Dr7 = 0x00000000;
+
+  SetThreadContext(hThread, &ctx);
+  ResumeThread(hThread);
+
+  DebugActiveProcessStop(pid);
+
+  Sleep(100);
+
+  // Terminate program
+  exit(signum);
+}
+
 //main function
 static void printBattleList(uv_work_t *req){
 
@@ -176,6 +203,10 @@ static void printBattleList(uv_work_t *req){
   CloseHandle(snapshot);
 
 
+  signal(SIGINT, signal_callback_handler);
+  printf("pid: %d \n",getpid());
+
+
   moduleAddr = 0;
   //get pointer to module adress and also prints module name
   moduleAddr = dwGetModuleBaseAddress(pid, "pxgclient.exe");
@@ -198,7 +229,7 @@ static void printBattleList(uv_work_t *req){
   printf("ModuleAddress value): 0x%llX\n", value);
 
 /*testing print string
-  DWORD_PTR valAddr = 0x1C4A2428+0x28; 
+  DWORD_PTR valAddr = 0x1C4A2428+0x28;
   printf("%llX\n", valAddr);
   char str[30];
   char c;
@@ -216,10 +247,6 @@ static void printBattleList(uv_work_t *req){
   printf(" ---- DEBUG STARTING ----\n");
 
   //privileges();
-  //HANDLE hThread =  GetCurrentThread();
-  //DWORD tId = GetCurrentThreadId();
-  //printf("Current ThreadID: %d\n", tId);
-
   //adress to put a breakpoint
   DWORD_PTR address = moduleAddr+0x9D82C; // pxgclient
   BOOL fDebugActive = DebugActiveProcess(pid); // PID of target process
@@ -229,11 +256,11 @@ static void printBattleList(uv_work_t *req){
   DebugSetProcessKillOnExit(false);
 
   // get thread ID of the main thread in process
-  DWORD dwThreadID = GetProcessThreadID(pid);
+  dwThreadID = GetProcessThreadID(pid);
   printf("Current Main ThreadID: 0x%X\n", dwThreadID);
 
   // gain access to the thread
-  HANDLE hThread = OpenThread(THREAD_ALL_ACCESS, FALSE, dwThreadID);
+  hThread = OpenThread(THREAD_ALL_ACCESS, FALSE, dwThreadID);
 
 
   CONTEXT ctx = {0};
@@ -384,6 +411,7 @@ static void printBattleList(uv_work_t *req){
       }
       ContinueDebugEvent(dbgEvent.dwProcessId, dbgEvent.dwThreadId, DBG_CONTINUE);
     }//end while
+
     //remove debugger
     SuspendThread(hThread);
     ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS | CONTEXT_INTEGER | CONTEXT_CONTROL;
@@ -416,13 +444,13 @@ DWORD GetProcessThreadID(DWORD dwProcID){
     for (bOK = Thread32First(hThreadSnap, &th32); bOK;
          bOK = Thread32Next(hThreadSnap, &th32)) {
       if (th32.th32OwnerProcessID == dwProcID) {
-        //HANDLE hThread = OpenThread(THREAD_QUERY_INFORMATION,
-        HANDLE hThread = OpenThread(THREAD_ALL_ACCESS,
+        //HANDLE hThreadTemp = OpenThread(THREAD_QUERY_INFORMATION,
+        HANDLE hThreadTemp = OpenThread(THREAD_ALL_ACCESS,
                                     FALSE, th32.th32ThreadID);
         printf("%d| checking thread ID: 0x%X\n", dwProcID, th32.th32ThreadID);
-        if (hThread) {
+        if (hThreadTemp) {
           FILETIME afTimes[4] = {0};
-          if (GetThreadTimes(hThread, &afTimes[0], &afTimes[1], &afTimes[2], &afTimes[3])) {
+          if (GetThreadTimes(hThreadTemp, &afTimes[0], &afTimes[1], &afTimes[2], &afTimes[3])) {
             //ULONGLONG ullTest = MAKEULONGLONG(afTimes[0].dwLowDateTime, afTimes[0].dwHighDateTime);
             ULONGLONG ullTest = (ULONGLONG)afTimes[0].dwHighDateTime << 32 | afTimes[0].dwLowDateTime;
             if (ullTest && ullTest < ullMinCreateTime) {
@@ -430,7 +458,7 @@ DWORD GetProcessThreadID(DWORD dwProcID){
               dwMainThreadID = th32.th32ThreadID; // let it be main... :)
             }
           }
-          CloseHandle(hThread);
+          CloseHandle(hThreadTemp);
         }
       }
     }
@@ -540,25 +568,6 @@ void pauseBattleList(const FunctionCallbackInfo<Value>& args){
 
   args.GetReturnValue().Set(Undefined(isolate));
 }
-
-/*
-void attackNearCreatureAsync(const FunctionCallbackInfo<Value>& args){
-  Isolate* isolate = args.GetIsolate();
-
-  Work* work = new Work();
-  work->request.data = work;
-
-  //store the callback from JS in the work package to invoke later
-  Local<Function> callback = Local<Function>::Cast(args[0]);
-  work->callback.Reset(isolate, callback);
-
-  //worker thread using libuv
-  uv_async_init(uv_default_loop(), &work->async, sendSygnalCreatureSelected);
-  uv_queue_work(uv_default_loop(), &work->request, attackNearCreature, NULL);
-
-  args.GetReturnValue().Set(Undefined(isolate));
-}
-*/
 
 static void isPkmNear(uv_work_t *req){
   WorkPkm *work = static_cast<WorkPkm*>(req->data);
@@ -989,6 +998,35 @@ void fishAsync(const FunctionCallbackInfo<Value>& args){
   //worker thread using libuv
   uv_queue_work(uv_default_loop(), &work->request, fish, fishComplete);
 
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
+void finishDebugging(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  Work* work = new Work();
+  CONTEXT ctx = {0};
+
+  if(hThread){
+    SuspendThread(hThread);
+    ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS | CONTEXT_INTEGER | CONTEXT_CONTROL;
+    GetThreadContext(hThread, &ctx);
+
+    ctx.Dr0 = 0x00000000;
+    ctx.Dr7 = 0x00000000;
+
+    SetThreadContext(hThread, &ctx);
+    ResumeThread(hThread);
+
+    DebugActiveProcessStop(pid);
+
+    Sleep(100);
+  }
+
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[0]);
+  work->callback.Reset(isolate, callback);
+
   Local<Number> val = Number::New(isolate, 1);
   args.GetReturnValue().Set(val);
 }
@@ -1003,6 +1041,7 @@ void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "attackPkm", attackPkmAsync);
   NODE_SET_METHOD(exports, "checkChangeBattlelist", checkChangeBlAsync);
   NODE_SET_METHOD(exports, "fish", fishAsync);
+  NODE_SET_METHOD(exports, "finishDebugging", finishDebugging);
 }
 
 NODE_MODULE(sharex, init)
