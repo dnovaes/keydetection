@@ -54,7 +54,7 @@ static void pressKbKey(uv_work_t *req){
     ip.ki.dwFlags = 0; // 0 for key press
     SendInput(1, &ip, sizeof(INPUT));
 
-    Sleep(300);
+    Sleep(100);
 
     // Release the "Z" key
     ip.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
@@ -64,6 +64,8 @@ static void pressKbKey(uv_work_t *req){
     ip.ki.wVk = 0x11; // virtual-key code for the "CTRL" key
     ip.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
     SendInput(1, &ip, sizeof(INPUT));
+
+    Sleep(100);
 }
 
 static void pressKbKeyComplete(uv_work_t *req, int status){
