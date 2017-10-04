@@ -159,6 +159,8 @@ int winmain(HINSTANCE module, HINSTANCE, LPSTR pCmdLine, int nCmdShow, uv_work_t
       UnregisterHotKey(hWnd, 3);
       UnregisterHotKey(hWnd, 4);
       //kill process window by force
+      workG->callback.Reset();
+      delete workG;
       DestroyWindow(hWnd);
       break;
     }
@@ -668,8 +670,8 @@ void sendSygnalResolution(uv_async_t *handle) {
   Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
 
   //Free up the persistent function callback
-  work->callback.Reset();
-  delete work;
+  //work->callback.Reset();
+  //delete work;
 }
 
 void getScreenResoAsync(const FunctionCallbackInfo<Value>& args){
