@@ -363,7 +363,7 @@ static void printBattleList(uv_work_t *req){
         //if(dbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == (LPVOID)(moduleAddr+0xD73C0)){
         if(dbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == (LPVOID)(moduleAddr+0xC16EE)){
             fBKcount++;
-            printf("BK: %d ", fBKcount);
+            //printf("BK: %d ", fBKcount);
 
             SuspendThread(hThread);
             ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS | CONTEXT_INTEGER | CONTEXT_CONTROL;
@@ -712,31 +712,34 @@ static void attackPkm(uv_work_t *req){
 
   CloseHandle(handle);
 
-  x = work->coords[1].x - work->coords[0].x;
-  y = work->coords[1].y - work->coords[0].y;
+  if(work->coords[1].y != 65535){
 
-  /*
-  printf("center: %d %d, sqm %d %d\n", center.x, center.y, sqm.x, sqm.y);
-  printf("setcursoPos at: %d, %d\n", x, y);
-  printf("setcursoPos at: %d, %d\n", center.x+sqm.x*x, center.y+sqm.y*y);
-  */
-  SetCursorPos(center.x+sqm.x*x, center.y+sqm.y*y);
+    x = work->coords[1].x - work->coords[0].x;
+    y = work->coords[1].y - work->coords[0].y;
 
-  Sleep(100);
+    /*
+    printf("center: %d %d, sqm %d %d\n", center.x, center.y, sqm.x, sqm.y);
+    printf("setcursoPos at: %d, %d\n", x, y);
+    printf("setcursoPos at: %d, %d\n", center.x+sqm.x*x, center.y+sqm.y*y);
+    */
+    SetCursorPos(center.x+sqm.x*x, center.y+sqm.y*y);
 
-  INPUT input;
-  input.type      = INPUT_MOUSE;
-  input.mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
-  SendInput(1,&input,sizeof(INPUT));
+    Sleep(100);
 
-  Sleep(100);
+    INPUT input;
+    input.type      = INPUT_MOUSE;
+    input.mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+    SendInput(1,&input,sizeof(INPUT));
 
-  ::ZeroMemory(&input,sizeof(INPUT));
-  input.type      = INPUT_MOUSE;
-  input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
-  SendInput(1,&input,sizeof(INPUT));
+    Sleep(50);
 
-  Sleep(100);
+    ::ZeroMemory(&input,sizeof(INPUT));
+    input.type      = INPUT_MOUSE;
+    input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+    SendInput(1,&input,sizeof(INPUT));
+
+    Sleep(50);
+  }
 }
 
 static void attackPkmComplete(uv_work_t *req, int status){
