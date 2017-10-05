@@ -149,8 +149,8 @@ void leftClickAsync(const FunctionCallbackInfo<Value>& args){
 static void getColorFishing(uv_work_t *req){
 
   Work *work = static_cast<Work*>(req->data);
-  int i=0;
-  int NSAMPLES = 190;
+  int i=0, j;
+  int NSAMPLES = 170;
 
   SetCursorPos(work->pos.x, work->pos.y);
 
@@ -160,23 +160,29 @@ static void getColorFishing(uv_work_t *req){
     HDC dc = GetDC(NULL);
     COLORREF _pixel[3];
 
-    _pixel[0] = GetPixel(dc, work->pos.x-1, work->pos.y);
-    _pixel[1] = GetPixel(dc, work->pos.x, work->pos.y);
-    _pixel[2] = GetPixel(dc, work->pos.x+1, work->pos.y);
+    _pixel[0] = GetPixel(dc, work->pos.x-2, work->pos.y);
+    _pixel[1] = GetPixel(dc, work->pos.x-1, work->pos.y);
+    _pixel[2] = GetPixel(dc, work->pos.x, work->pos.y);
+    _pixel[3] = GetPixel(dc, work->pos.x+1, work->pos.y);
+    _pixel[4] = GetPixel(dc, work->pos.x+2, work->pos.y);
 
-    int _red[3];
-	  int _green[3];
+    int _red[5];
+	  int _green[5];
 	  //int _blue[2];
 
-	  _red[0] = GetRValue(_pixel[0]);
-    _green[0] = GetGValue(_pixel[0]);
-    //_blue[0] = GetBValue(_pixel);
+    for(j=0;j<5;j++){
+      _red[j] = GetRValue(_pixel[j]);
+      _green[j] = GetGValue(_pixel[j]);
+    }
+      /*_red[0] = GetRValue(_pixel[0]);
+      _green[0] = GetGValue(_pixel[0]);
+      //_blue[0] = GetBValue(_pixel);
 
-	  _red[1] = GetRValue(_pixel[1]);
-    _green[1] = GetGValue(_pixel[1]);
+      _red[1] = GetRValue(_pixel[1]);
+      _green[1] = GetGValue(_pixel[1]);
 
-	  _red[2] = GetRValue(_pixel[2]);
-    _green[2] = GetGValue(_pixel[2]);
+      _red[2] = GetRValue(_pixel[2]);
+      _green[2] = GetGValue(_pixel[2]);*/
 
     ReleaseDC(NULL, dc);
 /*
@@ -193,11 +199,14 @@ static void getColorFishing(uv_work_t *req){
     printf("\n");
 */
 
-    if((_red[0] < 20 || _red[1] < 20)&&(_green[0] > 100 || _green[1] > 100)){
-      i=NSAMPLES;
-    }else{
-      Sleep(100);
-      i++;
+    for(j=0;j<5;j++){
+      if((_red[j] < 20)&&(_green[j] > 100)){
+        i=NSAMPLES;
+        break;
+      }else{
+        Sleep(100);
+        i++;
+      }
     }
   }
 }
