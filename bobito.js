@@ -288,6 +288,7 @@ function startFishing(){
     coords.x = center.x+(3*sqm.length);
     coords.y = center.y+(0*sqm.height);
     coords.y = coords.y+(sqm.height/3);
+//    coords.y = coords.y+(2*sqm.height/5);
 
     lock.acquire("lockmouse", function(done){
       console.log("\nlockmouse fishing acquired!");
