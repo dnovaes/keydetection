@@ -151,6 +151,9 @@ static void getColorFishing(uv_work_t *req){
   Work *work = static_cast<Work*>(req->data);
   int i=0, j;
   int NSAMPLES = 210;
+  int _red[5];
+  int _green[5];
+	  //int _blue[2];
 
   SetCursorPos(work->pos.x, work->pos.y);
 
@@ -166,9 +169,6 @@ static void getColorFishing(uv_work_t *req){
     _pixel[3] = GetPixel(dc, work->pos.x+1, work->pos.y);
     _pixel[4] = GetPixel(dc, work->pos.x+2, work->pos.y);
 
-    int _red[5];
-	  int _green[5];
-	  //int _blue[2];
 
     for(j=0;j<5;j++){
       _red[j] = GetRValue(_pixel[j]);
