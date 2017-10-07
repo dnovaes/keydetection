@@ -159,8 +159,9 @@ static void getColorFishing(uv_work_t *req){
 
   Sleep(6000);
 
+  HDC dc = GetDC(NULL);
+
   while(i<NSAMPLES){
-    HDC dc = GetDC(NULL);
     COLORREF _pixel[5];
 
     _pixel[0] = GetPixel(dc, work->pos.x-2, work->pos.y);
@@ -169,22 +170,19 @@ static void getColorFishing(uv_work_t *req){
     _pixel[3] = GetPixel(dc, work->pos.x+1, work->pos.y);
     _pixel[4] = GetPixel(dc, work->pos.x+2, work->pos.y);
 
-
     for(j=0;j<5;j++){
       _red[j] = GetRValue(_pixel[j]);
       _green[j] = GetGValue(_pixel[j]);
+      if((_red[j] < 20)&&(_green[j] > 100)){
+        printf("Red: 0x%02x %d\n", _red[0], _red[0]);
+        printf("Green: 0x%02x %d\n", _green[0], _green[0]);
+        i=NSAMPLES;
+        break;
+      }else{
+        Sleep(50);
+      }
     }
-      /*_red[0] = GetRValue(_pixel[0]);
-      _green[0] = GetGValue(_pixel[0]);
       //_blue[0] = GetBValue(_pixel);
-
-      _red[1] = GetRValue(_pixel[1]);
-      _green[1] = GetGValue(_pixel[1]);
-
-      _red[2] = GetRValue(_pixel[2]);
-      _green[2] = GetGValue(_pixel[2]);*/
-
-    ReleaseDC(NULL, dc);
 /*
     printf("Red: 0x%02x %d\n", _red[0], _red[0]);
     printf("Green: 0x%02x %d\n", _green[0], _green[0]);
@@ -198,17 +196,11 @@ static void getColorFishing(uv_work_t *req){
 
     printf("\n");
 */
-
-    for(j=0;j<5;j++){
-      if((_red[j] < 20)&&(_green[j] > 100)){
-        i=NSAMPLES;
-        break;
-      }else{
-        Sleep(100);
-        i++;
-      }
-    }
+    //printf("%d\n", i);
+    i++;
   }
+  //printf("fishing finished");
+  ReleaseDC(NULL, dc);
 }
 
 static void getColorFishingComplete(uv_work_t *req, int status){
