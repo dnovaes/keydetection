@@ -150,15 +150,15 @@ static void getColorFishing(uv_work_t *req){
 
   Work *work = static_cast<Work*>(req->data);
   int i=0, j;
-  int NSAMPLES = 170;
+  int NSAMPLES = 210;
 
   SetCursorPos(work->pos.x, work->pos.y);
 
-  Sleep(7000);
+  Sleep(6000);
 
   while(i<NSAMPLES){
     HDC dc = GetDC(NULL);
-    COLORREF _pixel[3];
+    COLORREF _pixel[5];
 
     _pixel[0] = GetPixel(dc, work->pos.x-2, work->pos.y);
     _pixel[1] = GetPixel(dc, work->pos.x-1, work->pos.y);
