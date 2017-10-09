@@ -12,7 +12,7 @@ const {remote} = require('electron');
 //var win = remote.BrowserWindow.fromId(1);
 var pause = true;
 var battlePokelist = {};
-var searchPokeArr= ["Magikarp"];
+var searchPokeArr= ["Magikarp", "Rattata"];
 var lock = new AsyncLock();
 var locktarget = new AsyncLock();
 
@@ -33,6 +33,15 @@ remote.getCurrentWindow().on('close', (e) => {
   });
   //win.hide();
 });
+
+/*
+mouse.getCursorPosbyClick(function(pos){
+  console.log(pos);
+  bl.eyeOnM1(pos, function(res){console.log(res);});
+  //bl.eyeOnM2(pos, function(res){});
+  //bl.eyeOnM3(pos, function(res){});
+});
+*/
 
 //updateScreenCoords({});
 
@@ -161,32 +170,33 @@ async function lookForFighting(){
               //attack and just return after pokemon is dead
               ftargetFound=1;
               locktarget.acquire("locktarget", function(donetarget){
-                lock.acquire("lockmouse", function(done){
-                  if(battlePokelist[iBl]!=0){
-                    console.log(`lockmouse attack acquired! ${battlePokelist[iBl].addr}`);
-                  }else{
-                    done();
-                    donetarget();
-                    console.log("fake target. was deleted during processing. will restart as lookForFighting in the doneTarget()");
-                  }
-                  //  console.log("lock2 fighting acquired!");
-                  bl.attackPkm(battlePokelist[iBl].addr, function(){
-                      done();
-                  });
-                }, function(err, ret){
-                  // lockmouse released
-                  console.log("lockmouse attack released! [pokemon selected]");
-                });
-
-                bl.waitForDeath(battlePokelist[iBl].addr, function(){
-                  console.log("pokemon is dead.");
-                  battlePokelist[iBl] = 0;
-    //              if((fcheckChangeBlRestarted == 0)&&(blCount == lengthBl)){
-                    //after pokmon dead, force a call to lookForfight to check if there is still
-                    //other pokemons to target
-    //              }
+              lock.acquire("lockmouse", function(done){
+                if(battlePokelist[iBl]!=0){
+                  console.log(`lockmouse attack acquired! ${battlePokelist[iBl].addr}`);
+                }else{
+                  done();
                   donetarget();
+                  console.log("fake target. was deleted during processing. will restart as lookForFighting in the doneTarget()");
+                }
+                //  console.log("lock2 fighting acquired!");
+                bl.attackPkm(battlePokelist[iBl].addr, function(res){
+                    done();
                 });
+              }, function(err, ret){
+                // lockmouse released
+                console.log("lockmouse attack released! [pokemon selected]");
+              });
+
+              bl.waitForDeath(battlePokelist[iBl].addr, function(res){
+                console.log("pokemon is dead.");
+                battlePokelist[iBl] = 0;
+  //              if((fcheckChangeBlRestarted == 0)&&(blCount == lengthBl)){
+                  //after pokmon dead, force a call to lookForfight to check if there is still
+                  //other pokemons to target
+  //              }
+                donetarget();
+              });
+              return 0;
               }, function(err, ret){
                 fcheckChangeBlRestarted = 1;
                 setTimeout(lookForFighting, 1000);
@@ -252,7 +262,6 @@ function updateScreenCoords(res){
   sqm.length = parseInt((res.w/15).toFixed(2));
   sqm.height = parseInt((res.h/11).toFixed(2));
 
-
   console.log("Sqm: "+sqm.length+"x"+sqm.height);
 
   center.x = res.x + res.w/2;
@@ -279,6 +288,7 @@ function prepareForFishing(){
 
 function startFishing(){
   var coords = {"x":0, "y":0};
+  let fishStatus = 2; //normal pos
 
   //select game window
   //TODO: add focusWindow in every keyboard action later
@@ -295,31 +305,39 @@ function startFishing(){
       console.log("Start the Fishing!!!");
 
       mouse.setCursorPos(coords, function(res){console.log(coords, "cursor at pos set");});
-      bl.fish(function(res){console.log("fish clicked!");done();});
-//      keyboard.pressKbKey("Fishing", function (res){}); //keyboard CTRL+Z 1
-//      mouse.leftClick(function(res){ console.log("leftclicked!");done();});
+      bl.fish(function(res){
+        console.log("fish clicked!");
+        fishStatus = res.fishStatus;
+        done();
+      });
 
     }, function(err, ret){
-        console.log("lockmouse released");
+      console.log("lockmouse released");
+      //if player started fishing (3), wait for pokemon to get the fish, if not, restart fishing
+      if(fishStatus != 2){
+        //wait for the change of color, press CTRL+Z when the fish appears
+        console.log("Waiting for fish....");
+
+        mouse.getColorFishing({
+          "x": coords.x, "y": coords.y
+        },function(res){
+          if(!pause){
+            keyboard.pressKbKey("Fishing", function (res){
+              console.log("Fishing Rod Pulled Up!!");
+              //end of fishing
+              //IF pause is not requested, continue Fishing
+              //restart fishing after some time (this time is necessary:
+              //time: w8 for fishing sqm end animation of fished up to
+              //"available to fish here"
+              setTimeout(startFishing, 1000);
+            }); //keyboard. CTRLZ 2
+          }
+        }); //mouse.getColorFishing
+      }else{
+        console.log("fish restarting");
+        setTimeout(startFishing, 1000);
+      }
     }); //end lock
 
-    //wait for the change of color, press CTRL+Z when the fish appears
-    console.log("Waiting for fish....");
-
-    mouse.getColorFishing({
-      "x": coords.x, "y": coords.y
-    },function(res){
-      if(!pause){
-        keyboard.pressKbKey("Fishing", function (res){
-          console.log("Fishing Rod Pulled Up!!");
-          //end of fishing
-          //IF pause is not requested, continue Fishing
-          //restart fishing after some time (this time is necessary:
-          //time: w8 for fishing sqm end animation of fished up to
-          //"available to fish here"
-          setTimeout(startFishing, 1000);
-        }); //keyboard. CTRLZ 2
-      }
-    }); //mouse.getColorFishing
   }); //focuscc.focusWIndow
 }
