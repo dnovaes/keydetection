@@ -107,7 +107,7 @@ static void focusWindow(uv_work_t *req){
   HINSTANCE module = GetModuleHandle(NULL);
 
   //LPSTR pcmdLine = wtext;
-  HWND hWndPXG = SelectWindowByProcessName("pxgclient.exe");
+  HWND hWndPXG = SelectWindowByProcessName("pxgclient_dx9.exe");
 
   RegisterHotKey(hWndPXG, 99, NULL, 0x12); //VK_MENU = ALT
 
