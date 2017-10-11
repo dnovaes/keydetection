@@ -160,9 +160,9 @@ static void getColorFishing(uv_work_t *req){
   Sleep(6000);
 
   HDC dc = GetDC(NULL);
+  COLORREF _pixel[5];
 
   while(i<NSAMPLES){
-    COLORREF _pixel[5];
 
     _pixel[0] = GetPixel(dc, work->pos.x-2, work->pos.y);
     _pixel[1] = GetPixel(dc, work->pos.x-1, work->pos.y);
@@ -174,8 +174,8 @@ static void getColorFishing(uv_work_t *req){
       _red[j] = GetRValue(_pixel[j]);
       _green[j] = GetGValue(_pixel[j]);
       if((_red[j] < 20)&&(_green[j] > 100)){
-        printf("Red: 0x%02x %d\n", _red[0], _red[0]);
-        printf("Green: 0x%02x %d\n", _green[0], _green[0]);
+        //printf("Red: 0x%02x %d\n", _red[0], _red[0]);
+        //printf("Green: 0x%02x %d\n", _green[0], _green[0]);
         i=NSAMPLES;
         break;
       }else{
@@ -248,8 +248,72 @@ void getColorFishingAsync(const FunctionCallbackInfo<Value>& args){
   args.GetReturnValue().Set(Undefined(isolate));
 }
 
+static void getCursorPos(uv_work_t *req){
+
+  Work *work = static_cast<Work*>(req->data);
+  MSG msg = {0};
+
+  //0x52 = R key
+  if(RegisterHotKey(NULL, 1, NULL, 0x52)){
+
+    while(GetMessage(&msg, NULL, 0, 0)){
+
+      if(msg.message == WM_HOTKEY){
+
+        GetCursorPos(&work->pos);
+/*
+        int i;
+        for(i=0;i<6;i++){
+          SetCursorPos(work->pos.x+i*32, work->pos.y);
+          Sleep(1000);
+        }
+*/
+        break;
+      }
+    }
+    UnregisterHotKey(NULL, 1);
+  }
+}
+
+static void getCursorPosComplete(uv_work_t *req, int status){
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+
+//  printf("isPkmNearComplete calculations started\n");
+
+  Work *work = static_cast<Work*>(req->data);
+
+  Local<Object> obj = Object::New(isolate);
+  obj->Set(String::NewFromUtf8(isolate, "x"), Number::New(isolate, work->pos.x));
+  obj->Set(String::NewFromUtf8(isolate, "y"), Number::New(isolate, work->pos.y));
+
+  Handle<Value> argv[] = {obj};
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
+  //Free up the persistent function callback
+  work->callback.Reset();
+  delete work;
+}
+
+void getCursorPosAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  Work* work = new Work();
+  work->request.data = work;
+
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[0]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  uv_queue_work(uv_default_loop(), &work->request, getCursorPos, getCursorPosComplete);
+
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
 void init(Local<Object> exports) {
-  //NODE_SET_METHOD(exports, "getCursorPosition", getCursorPositionAsync);
+  NODE_SET_METHOD(exports, "getCursorPosbyClick", getCursorPosAsync);
   NODE_SET_METHOD(exports, "setCursorPos", setCursorPosAsync);
   NODE_SET_METHOD(exports, "leftClick", leftClickAsync);
   NODE_SET_METHOD(exports, "getColorFishing", getColorFishingAsync);
