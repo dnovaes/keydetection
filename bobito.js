@@ -27,6 +27,7 @@ var sqm = {
 var counterBattlelist = 168; //=0
 var fBtnScreenCoords = 0;
 
+
 remote.getCurrentWindow().on('close', (e) => {
   bl.finishDebugging(function(res){
     app.quit();
@@ -34,7 +35,8 @@ remote.getCurrentWindow().on('close', (e) => {
   //win.hide();
 });
 
-/*
+
+/* MOVESET
 mouse.getCursorPosbyClick(function(pos){
   console.log(pos);
   bl.eyeOnM1(pos, function(res){console.log(res);});
@@ -103,7 +105,8 @@ bl.getBattleList(function(res){
     case 92:
       res.type = "PLAYER";
       break;
-    case 112:
+    //case 112:
+    case 204:
       res.type = "POKEMON";
       if((battlePokelist[res.addr]==0)||(battlePokelist[res.addr]==undefined)){
         for(i=0;i<searchPokeArr.length;i++){
@@ -130,6 +133,7 @@ checkChangeBattlelist();
 
 function checkChangeBattlelist(){
   bl.checkChangeBattlelist(function(res){
+      //console.log(res.blCounter);
       //if there is pokemon on battlelist, counterBattlelist changed and no lookForFighting. then call a new lookForFight function
       if((res.blCounter != counterBattlelist)&&(Object.keys(battlePokelist).length>0)
           &&(fLookForFighting==0)){
@@ -231,8 +235,8 @@ async function lookForFighting(){
 
 //sqm's in the screen: 15x11
 function updateScreenCoords(res){
-
-/*  res = {"x":0, "y":0, "w":0, "h":0}
+/*
+  res = {"x":0, "y":0, "w":0, "h":0}
 
   res.x = 324;
   res.y = 174;
@@ -256,7 +260,6 @@ function updateScreenCoords(res){
 
   var coordhEl = document.querySelector("input[name='coordh']");
   coordhEl.value = res.h;
-
 
   //length and height for each SQM
   sqm.length = parseInt((res.w/15).toFixed(2));
@@ -308,6 +311,7 @@ function startFishing(){
       bl.fish(function(res){
         console.log("fish clicked!");
         fishStatus = res.fishStatus;
+        console.log("fishStatus: ", res.fishStatus);
         done();
       });
 
