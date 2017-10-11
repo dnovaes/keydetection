@@ -40,6 +40,16 @@ struct Coords{
   int x,y,z;
 };
 
+struct WorkPos{
+  //pointer when starting worker threads
+  uv_work_t request;
+  uv_async_t async;
+  //stores the javascript callback function, persistent means: store in the heap
+  Persistent<Function> callback;
+  DWORD_PTR creatureAddr;
+  POINT pos;
+};
+
 struct Work{
   //pointer when starting worker threads
   uv_work_t request;
@@ -68,6 +78,15 @@ struct WorkBl{
   int counter;
 };
 
+struct WorkFish{
+  //pointer when starting worker threads
+  uv_work_t request;
+  uv_async_t async;
+  //stores the javascript callback function, persistent means: store in the heap
+  Persistent<Function> callback;
+  byte fishStatus;
+};
+
 //global var
 char mutex = 1; //1 = continue
 uv_rwlock_t numlock;
@@ -77,11 +96,20 @@ DWORD dwThreadID;
 DWORD_PTR moduleAddr;
 POINT center, sqm;
 HANDLE hThread;
+RECT pxgCoords;
+int m1 = 0;
+int m2 = 0;
+int m3 = 0;
+int m4 = 0;
 
 //const
+/* OPEN GL
+//adress for position change (writes into pokemon pos. when something moves in screen)
+const DWORD_PTR INSTR_POSADDR     = 0xC16EE;
+//0xC16F0
 //use moduleAddress as base
-const DWORD_PTR OFFSET_PLAYER_POSX= 0x2ED84C;
 const DWORD_PTR OFFSET_PLAYER_POSY= 0x2ED844;
+const DWORD_PTR OFFSET_PLAYER_POSX= 0x2ED84C;
 const DWORD_PTR OFFSET_PLAYER_POSZ= 0x2ED854;
 //use creatureAddress as base
 const DWORD_PTR OFFSET_PKM_NAME   = 0x28;
@@ -97,7 +125,45 @@ const DWORD_PTR OFFSET_BLCOUNT_P3 = 0x30;
 const DWORD_PTR BASEADDR_FISHING  = 0x002EC83C;
 const DWORD_PTR OFFSET_FISHING_P1 = 0x54;
 const DWORD_PTR OFFSET_FISHING_P2 = 0x4;
+//pointer to container moveset
+const DWORD_PTR BASEADDR_MOVESET  = 0x002ECCC0;
+const DWORD_PTR OFFSET_MOVESET_P1 = 0x9C;
+const DWORD_PTR OFFSET_MOVESET_P2 = 0x54;
+const DWORD_PTR OFFSET_MOVESET_P3 = 0x34;
+const DWORD_PTR OFFSET_MOVESET_X  = 0x24;
+const DWORD_PTR OFFSET_MOVESET_Y  = 0x30;
+*/
 
+/* DIRECTX9 */
+//adress for position change (writes into pokemon pos. when something moves in screen)
+const DWORD_PTR INSTR_POSADDR     = 0xC099A;
+//use moduleAddress as base
+const DWORD_PTR OFFSET_PLAYER_POSX= 0x2EB840;
+const DWORD_PTR OFFSET_PLAYER_POSY= 0x2EB844;
+const DWORD_PTR OFFSET_PLAYER_POSZ= 0x2EB848;
+//use creatureAddress as base
+const DWORD_PTR OFFSET_PKM_NAME_LENGTH   = 0x24; //byte
+const DWORD_PTR OFFSET_PKM_NAME   = 0x28;
+const DWORD_PTR OFFSET_PKM_POSX   = 0xC;
+const DWORD_PTR OFFSET_PKM_POSY   = 0x10;
+const DWORD_PTR OFFSET_PKM_POSZ   = 0x14;
+const DWORD_PTR OFFSET_PKM_LIFE   = 0x38;
+//pointer to battlelist counter of active creatures
+const DWORD_PTR BASEADDR_BLACOUNT = 0x002EA820;
+const DWORD_PTR OFFSET_BLCOUNT_P1 = 0x33C;
+const DWORD_PTR OFFSET_BLCOUNT_P2 = 0xA4;
+const DWORD_PTR OFFSET_BLCOUNT_P3 = 0x30;
+//pointer to fishing status address
+const DWORD_PTR BASEADDR_FISHING  = 0x002EA83C;
+const DWORD_PTR OFFSET_FISHING_P1 = 0x54;
+const DWORD_PTR OFFSET_FISHING_P2 = 0x4;
+//pointer to container moveset
+const DWORD_PTR BASEADDR_MOVESET  = 0x0;
+const DWORD_PTR OFFSET_MOVESET_P1 = 0x0;
+const DWORD_PTR OFFSET_MOVESET_P2 = 0x0;
+const DWORD_PTR OFFSET_MOVESET_P3 = 0x0;
+const DWORD_PTR OFFSET_MOVESET_X  = 0x0;
+const DWORD_PTR OFFSET_MOVESET_Y  = 0x0;
 
 DWORD GetProcessThreadID(DWORD pID);
 void printThreads(DWORD pid);
@@ -193,7 +259,7 @@ static void printBattleList(uv_work_t *req){
           // trim .exe if necessary, etc.
           std::string processName = std::string(process.szExeFile);
           //if (processName == "MineSweeper.exe"){ //#mine
-          if (processName == "pxgclient.exe"){
+          if (processName == "pxgclient_dx9.exe"){
              pid = process.th32ProcessID;
              printf("Process %d (0x%04X) ", pid, pid);
              break;
@@ -209,10 +275,7 @@ static void printBattleList(uv_work_t *req){
 
   moduleAddr = 0;
   //get pointer to module adress and also prints module name
-  moduleAddr = dwGetModuleBaseAddress(pid, "pxgclient.exe");
-//  DWORD_PTR msvcrtAddr = dwGetModuleBaseAddress(pid, "msvcrt.dll");
-//  DWORD_PTR msvcrt_strcmpAddr = msvcrtAddr+0x18B11+0x105; //cmp a varr to print in screen (msvcrt.strcmp+105)
-
+  moduleAddr = dwGetModuleBaseAddress(pid, "pxgclient_dx9.exe");
   //moduleAddr = dwGetModuleBaseAddress(pid, "MineSweeper.exe"); //#mine
 
   printf("address of module: 0x%X\n", (DWORD)moduleAddr);
@@ -226,7 +289,7 @@ static void printBattleList(uv_work_t *req){
   //ReadProcessMemory(handle, (LPVOID)(moduleAddr), &value, sizeof(DWORD), NULL);
   //printf("ModuleAddress value (Entry Point): 0x%X\n", value);
   ReadProcessMemory(handle, (LPVOID)(moduleAddr), &value, sizeof(DWORD), NULL);
-  printf("ModuleAddress value): 0x%llX\n", value);
+  printf("ModuleAddress value): 0x%X\n", value);
 
 /*testing print string
   DWORD_PTR valAddr = 0x1C4A2428+0x28;
@@ -248,7 +311,7 @@ static void printBattleList(uv_work_t *req){
 
   //privileges();
   //adress to put a breakpoint
-  DWORD_PTR address = moduleAddr+0x9D82C; // pxgclient
+  //DWORD_PTR address = moduleAddr+0x9D82C; // pxgclient
   BOOL fDebugActive = DebugActiveProcess(pid); // PID of target process
   printf("permission for debug: %d\n", fDebugActive);
 
@@ -285,9 +348,8 @@ static void printBattleList(uv_work_t *req){
     ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS | CONTEXT_INTEGER | CONTEXT_CONTROL;
     GetThreadContext(hThread, &ctx);
 
-    //ctx.Dr0 = address;
     //ctx.Dr0 = moduleAddr+0xD73C0;
-    ctx.Dr0 = moduleAddr+0xC16EE;
+    ctx.Dr0 = moduleAddr+INSTR_POSADDR;
     ctx.Dr7 = 0x00000001;
 
     SetThreadContext(hThread, &ctx);
@@ -346,7 +408,7 @@ static void printBattleList(uv_work_t *req){
 
       switch (dbgEvent.u.Exception.ExceptionRecord.ExceptionCode) {
         case EXCEPTION_ACCESS_VIOLATION:
-          printf("\n--> Attempt to %s data at address %llX",
+          printf("\n--> Attempt to %s data at address %X",
           dbgEvent.u.Exception.ExceptionRecord.ExceptionInformation[0] ? TEXT("write") : TEXT("read"),
           dbgEvent.u.Exception.ExceptionRecord.ExceptionInformation[1]);
           break;
@@ -361,7 +423,7 @@ static void printBattleList(uv_work_t *req){
           dbgEvent.u.Exception.ExceptionRecord.ExceptionCode == 0x4000001E //Single Step WOW
         )){
         //if(dbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == (LPVOID)(moduleAddr+0xD73C0)){
-        if(dbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == (LPVOID)(moduleAddr+0xC16EE)){
+        if(dbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == (LPVOID)(moduleAddr+INSTR_POSADDR)){
             fBKcount++;
             //printf("BK: %d ", fBKcount);
 
@@ -382,7 +444,7 @@ static void printBattleList(uv_work_t *req){
 
             //ctx.Dr0 = address;
             //ctx.Dr0 = moduleAddr+0xD73C3;
-            ctx.Dr0 = moduleAddr+0xC16F0;
+            ctx.Dr0 = moduleAddr+INSTR_POSADDR+0x2;
             ctx.Dr7 = 0x00000001;
 
             while(mutex == 0){
@@ -393,13 +455,13 @@ static void printBattleList(uv_work_t *req){
             SetThreadContext(hThread, &ctx);
             ResumeThread(hThread);
             //fBreakPoint = TRUE;
-        }else if(dbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == (LPVOID)(moduleAddr+0xC16F0)){
+        }else if(dbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == (LPVOID)(moduleAddr+INSTR_POSADDR+0x2)){
             //update breakpoint
             SuspendThread(hThread);
             ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS | CONTEXT_INTEGER | CONTEXT_CONTROL;
             GetThreadContext(hThread, &ctx);
 
-            ctx.Dr0 = moduleAddr+0xC16EE;
+            ctx.Dr0 = moduleAddr+INSTR_POSADDR;
             ctx.Dr7 = 0x00000001;
 
             SetThreadContext(hThread, &ctx);
@@ -509,17 +571,25 @@ void sendSygnalCreatureAddr(uv_async_t *handle) {
 
   Isolate* isolate = Isolate::GetCurrent();
   v8::HandleScope handleScope(isolate);
+/*
 
+const DWORD_PTR OFFSET_PKM_NAME_LENGTH   = 0x24; //byte
+const DWORD_PTR OFFSET_PKM_NAME   = 0x28; //text
+const DWORD_PTR OFFSET_PKM_POSX   = 0xC; //4bytes
+const DWORD_PTR OFFSET_PKM_POSY   = 0x10; //4bytes
+const DWORD_PTR OFFSET_PKM_POSZ   = 0x14; //byte
+const DWORD_PTR OFFSET_PKM_LIFE   = 0x38; //byte
+*/
 
   DWORD_PTR entityAddr = work->creatureAddr;
   char entityName[16];
-  char entityType;
-  //printCreature(pid, entityAddr);
+  byte entityType;
 
   HANDLE handlep = OpenProcess(PROCESS_VM_READ, FALSE, pid);
   ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28), &entityName, 16, NULL);
   ReadProcessMemory(handlep, (LPDWORD)(entityAddr), &entityType, 1, NULL);
   CloseHandle(handlep); //close handle of process
+  //printf("entityName: %s, Type: %d, Address: 0x%X\n", entityName, entityType, entityAddr);
 
   Local<Object> obj = Object::New(isolate);
   obj->Set(String::NewFromUtf8(isolate, "addr"), Number::New(isolate, entityAddr));
@@ -641,12 +711,12 @@ void isPkmNearSync(const FunctionCallbackInfo<Value>& args){
   ReadProcessMemory(handle, (LPDWORD)(moduleAddr+OFFSET_PLAYER_POSX), &work->coords[0].x, 4, NULL);
   ReadProcessMemory(handle, (LPDWORD)(moduleAddr+OFFSET_PLAYER_POSY), &work->coords[0].y, 4, NULL);
   ReadProcessMemory(handle, (LPDWORD)(moduleAddr+OFFSET_PLAYER_POSZ), &work->coords[0].z, 1, NULL);
-  //printf("player position: %d, %d, %d\n", work->coords[0].x, work->coords[0].y, work->coords[0].z);
+  printf("player position: %d, %d, %d\n", work->coords[0].x, work->coords[0].y, work->coords[0].z);
 
   ReadProcessMemory(handle, (LPDWORD)(pkmAddr+OFFSET_PKM_POSX), &work->coords[1].x, 4, NULL);
   ReadProcessMemory(handle, (LPDWORD)(pkmAddr+OFFSET_PKM_POSY), &work->coords[1].y, 4, NULL);
   ReadProcessMemory(handle, (LPDWORD)(pkmAddr+OFFSET_PKM_POSZ), &work->coords[1].z, 1, NULL);
-  //printf("pokemon position: %d, %d, %d\n", work->coords[1].x, work->coords[1].y, work->coords[1].z);
+  printf("pokemon position: %d, %d, %d\n", work->coords[1].x, work->coords[1].y, work->coords[1].z);
 
   CloseHandle(handle);
 
@@ -712,6 +782,7 @@ static void attackPkm(uv_work_t *req){
 
   CloseHandle(handle);
 
+  printf("checking if position is valid: %d\n", work->coords[1].y);
   if(work->coords[1].y != 65535){
 
     x = work->coords[1].x - work->coords[0].x;
@@ -719,26 +790,27 @@ static void attackPkm(uv_work_t *req){
 
     /*
     printf("center: %d %d, sqm %d %d\n", center.x, center.y, sqm.x, sqm.y);
-    printf("setcursoPos at: %d, %d\n", x, y);
-    printf("setcursoPos at: %d, %d\n", center.x+sqm.x*x, center.y+sqm.y*y);
     */
+    printf("setcursoPos at: %d, %d\n", center.x+sqm.x*x, center.y+sqm.y*y);
     SetCursorPos(center.x+sqm.x*x, center.y+sqm.y*y);
 
-    Sleep(100);
+    Sleep(50);
 
     INPUT input;
+    ::ZeroMemory(&input,sizeof(INPUT));
     input.type      = INPUT_MOUSE;
     input.mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
     SendInput(1,&input,sizeof(INPUT));
 
     Sleep(50);
 
-    ::ZeroMemory(&input,sizeof(INPUT));
     input.type      = INPUT_MOUSE;
     input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
     SendInput(1,&input,sizeof(INPUT));
 
     Sleep(50);
+  }else{
+    printf("invalid position\n");
   }
 }
 
@@ -835,11 +907,88 @@ static void waitForDeath(uv_work_t *req){
   Work *work = static_cast<Work*>(req->data);
 
   HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
-
+  INPUT input;
   char life;
+
   do{
-    Sleep(900);
+    Sleep(800);
     ReadProcessMemory(handle, (LPDWORD)(work->creatureAddr+OFFSET_PKM_LIFE), &life, 1, NULL);
+
+    if(m1){
+      // Set up a generic keyboard event.
+      input.type = INPUT_KEYBOARD;
+      input.ki.wScan = 0; // hardware scan code for key
+      input.ki.time = 0;
+      input.ki.dwExtraInfo = 0;
+
+      // Press the "F1" key
+      input.ki.wVk = VK_F1; // virtual-key code for the "F1" key
+      input.ki.dwFlags = 0; // 0 for key press
+      SendInput(1, &input, sizeof(INPUT));
+
+      Sleep(50);
+
+      input.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
+      SendInput(1, &input, sizeof(INPUT));
+
+      Sleep(50);
+    }
+    if(m2){
+      // Set up a generic keyboard event.
+      input.type = INPUT_KEYBOARD;
+      input.ki.wScan = 0; // hardware scan code for key
+      input.ki.time = 0;
+      input.ki.dwExtraInfo = 0;
+
+      input.ki.wVk = VK_F2; // virtual-key code for the "F2" key
+      input.ki.dwFlags = 0; // 0 for key press
+      SendInput(1, &input, sizeof(INPUT));
+
+      Sleep(50);
+
+      input.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
+      SendInput(1, &input, sizeof(INPUT));
+
+      Sleep(50);
+    }
+
+    if(m3){
+      // Set up a generic keyboard event.
+      input.type = INPUT_KEYBOARD;
+      input.ki.wScan = 0; // hardware scan code for key
+      input.ki.time = 0;
+      input.ki.dwExtraInfo = 0;
+
+      input.ki.wVk = VK_F3; // virtual-key code for the "F3" key
+      input.ki.dwFlags = 0; // 0 for key press
+      SendInput(1, &input, sizeof(INPUT));
+
+      Sleep(50);
+
+      input.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
+      SendInput(1, &input, sizeof(INPUT));
+
+      Sleep(50);
+    }
+
+    if(m4){
+      // Set up a generic keyboard event.
+      input.type = INPUT_KEYBOARD;
+      input.ki.wScan = 0; // hardware scan code for key
+      input.ki.time = 0;
+      input.ki.dwExtraInfo = 0;
+
+      input.ki.wVk = VK_F4; // virtual-key code for the "F4" key
+      input.ki.dwFlags = 0; // 0 for key press
+      SendInput(1, &input, sizeof(INPUT));
+
+      Sleep(50);
+
+      input.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
+      SendInput(1, &input, sizeof(INPUT));
+
+      Sleep(50);
+    }
     //printf("pokemon currently life: %d\n", life);
   }while(life > 0);
 
@@ -909,15 +1058,16 @@ void setScreenConfigSync(const FunctionCallbackInfo<Value>& args){
 }
 
 static void fish(uv_work_t *req){
-  Work *work = static_cast<Work*>(req->data);
+  WorkFish *work = static_cast<WorkFish*>(req->data);
   INPUT input;
-  byte fishing = 2;
+  byte fishStatus = 2;
   HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
   int i=-1;
 
   do{
     i++;
     // Set up a generic keyboard event.
+    ::ZeroMemory(&input,sizeof(INPUT));
     input.type = INPUT_KEYBOARD;
     input.ki.wScan = 0; // hardware scan code for key
     input.ki.time = 0;
@@ -933,7 +1083,7 @@ static void fish(uv_work_t *req){
     input.ki.dwFlags = 0; // 0 for key press
     SendInput(1, &input, sizeof(INPUT));
 
-    Sleep(100);
+    Sleep(50);
 
     // Release the "Z" key
     input.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
@@ -944,7 +1094,7 @@ static void fish(uv_work_t *req){
     input.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
     SendInput(1, &input, sizeof(INPUT));
 
-    Sleep(100);
+    Sleep(50);
 
     //LEFT CLICK
     // left down
@@ -952,23 +1102,24 @@ static void fish(uv_work_t *req){
     input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
     SendInput(1,&input,sizeof(INPUT));
 
-    Sleep(100);
+    Sleep(50);
 
     // left up
-    ::ZeroMemory(&input,sizeof(INPUT));
     input.type      = INPUT_MOUSE;
     input.mi.dwFlags  = MOUSEEVENTF_LEFTUP;
     SendInput(1,&input,sizeof(INPUT));
 
-    Sleep(400);
+    Sleep(400); //wait for 'fish status' update
 
     DWORD address;
 
     ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_FISHING), &address, sizeof(DWORD), NULL);
     ReadProcessMemory(handle, (LPDWORD)(address+OFFSET_FISHING_P1), &address, sizeof(DWORD), NULL);
-    ReadProcessMemory(handle, (LPDWORD)(address+OFFSET_FISHING_P2), &fishing, 1, NULL);
-    printf("Fish Status: %d\n", fishing);
-  }while((fishing != 3)&&(i<2)); //3 = fishing, 2 = normal
+    ReadProcessMemory(handle, (LPDWORD)(address+OFFSET_FISHING_P2), &fishStatus, 1, NULL);
+    printf("Fish Status: %d\n", fishStatus);
+
+  }while((fishStatus != 3)&&(i<2)); //3 = fishing, 2 = normal
+  work->fishStatus = fishStatus;
 
   CloseHandle(handle);
 }
@@ -976,10 +1127,11 @@ static void fish(uv_work_t *req){
 static void fishComplete(uv_work_t *req, int status){
   Isolate* isolate = Isolate::GetCurrent();
   v8::HandleScope handleScope(isolate);
-  Work *work = static_cast<Work*>(req->data);
+  WorkFish *work = static_cast<WorkFish*>(req->data);
 
-  Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  Local<Object> obj = Object::New(isolate);
+  obj->Set(String::NewFromUtf8(isolate, "fishStatus"), Number::New(isolate, work->fishStatus));
+  Handle<Value> argv[] = {obj};
   //execute the callback
   Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
 
@@ -991,7 +1143,7 @@ static void fishComplete(uv_work_t *req, int status){
 void fishAsync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
 
-  Work* work = new Work();
+  WorkFish* work = new WorkFish();
   work->request.data = work;
 
   //store the callback from JS in the work package to invoke later
@@ -1034,6 +1186,286 @@ void finishDebugging(const FunctionCallbackInfo<Value>& args){
   args.GetReturnValue().Set(val);
 }
 
+static void initMovesetC(uv_work_t *req){
+
+  Work *work = static_cast<Work*>(req->data);
+
+  HWND hPxg = FindWindow(NULL, "PXG Client");
+
+  GetWindowRect(hPxg, &pxgCoords);
+  printf("%d, %d, %d, %d\n", pxgCoords.left, pxgCoords.top, pxgCoords.right, pxgCoords.bottom);
+
+  DWORD address;
+  int containerY;
+
+  HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+
+  ReadProcessMemory(handle, (LPVOID)(moduleAddr+BASEADDR_MOVESET), &address, sizeof(DWORD), NULL);
+  ReadProcessMemory(handle, (LPVOID)(address+OFFSET_MOVESET_P1), &address, sizeof(DWORD), NULL);
+  ReadProcessMemory(handle, (LPVOID)(address+OFFSET_MOVESET_P2), &address, sizeof(DWORD), NULL);
+  ReadProcessMemory(handle, (LPVOID)(address+OFFSET_MOVESET_P3), &address, sizeof(DWORD), NULL);
+  ReadProcessMemory(handle, (LPVOID)(address+OFFSET_MOVESET_Y), &containerY, 4, NULL);
+
+  printf("%d\n", containerY);
+
+  int i=0, j;
+  const int NSAMPLES = 10;
+
+  int posx = pxgCoords.left+23;
+  int posy = pxgCoords.top+containerY;
+
+  HDC dc = GetDC(NULL);
+  COLORREF _pixel[5];
+
+  while(i<NSAMPLES){
+    for(j=0;j<6;j++){
+      posx = pxgCoords.left+22+j*32;
+      posy = pxgCoords.top+containerY;
+
+      _pixel[0] = GetPixel(dc, posx-2, posy);
+      _pixel[1] = GetPixel(dc, posx-1, posy);
+
+      SetCursorPos(posx, posy);
+      Sleep(1500);
+
+      _pixel[2] = GetPixel(dc, posx-2, posy);
+      _pixel[3] = GetPixel(dc, posx-1, posy);
+
+      if((_pixel[0] != _pixel[2])||(_pixel[0] != _pixel[3])){
+        printf("m%d is on cooldown!\n", j+1);
+      }
+    }
+
+/*
+    _pixel[0] = GetPixel(dc, posx-2, posy);
+    _pixel[1] = GetPixel(dc, posx-1, posy);
+    _pixel[2] = GetPixel(dc, posx, posy);
+    _pixel[3] = GetPixel(dc, posx+1, posy);
+    _pixel[4] = GetPixel(dc, posx+2, posy);
+
+    printf("\n");
+    for(j=0;j<5;j++){
+      _red[j] = GetRValue(_pixel[j]);
+      _green[j] = GetGValue(_pixel[j]);
+      printf("Red: 0x%02x %d\n", _red[j], _red[j]);
+      printf("Green: 0x%02x %d\n", _green[j], _green[j]);
+    }
+    Sleep(3000);
+    printf("\n");
+*/
+    i++;
+  }
+  //printf("fishing finished");
+  ReleaseDC(NULL, dc);
+
+  CloseHandle(handle);
+}
+
+static void initMovesetCC(uv_work_t *req, int status){
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+
+  Work *work = static_cast<Work*>(req->data);
+
+  //Creates a variable of type Number which stores a value of v8::Number with value 1
+  //Local variables are just visible to this scope. Handles are visible even in Javascript
+  Local<Number> val = Number::New(isolate, 1);
+  Handle<Value> argv[] = {val};
+
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
+  //Free up the persistent function callback
+  work->callback.Reset();
+  delete work;
+}
+
+void initMovesetContainerAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  Work* work = new Work();
+  work->request.data = work;
+
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[0]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  uv_queue_work(uv_default_loop(), &work->request, initMovesetC, initMovesetCC);
+
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
+static void followMoveM1(uv_work_t *req){
+
+  WorkPos *work = static_cast<WorkPos*>(req->data);
+
+/*
+  HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+  DWORD address;
+  int containerY;
+
+  HWND hPxg = FindWindow(NULL, "PXG Client");
+
+  GetWindowRect(hPxg, &pxgCoords);
+
+  ReadProcessMemory(handle, (LPVOID)(moduleAddr+BASEADDR_MOVESET), &address, sizeof(DWORD), NULL);
+  ReadProcessMemory(handle, (LPVOID)(address+OFFSET_MOVESET_P1), &address, sizeof(DWORD), NULL);
+  ReadProcessMemory(handle, (LPVOID)(address+OFFSET_MOVESET_P2), &address, sizeof(DWORD), NULL);
+  ReadProcessMemory(handle, (LPVOID)(address+OFFSET_MOVESET_P3), &address, sizeof(DWORD), NULL);
+  ReadProcessMemory(handle, (LPVOID)(address+OFFSET_MOVESET_Y), &containerY, 4, NULL);
+
+  printf("%d\n", containerY);
+
+  int posx = pxgCoords.left+22+(0*32);
+  int posy = pxgCoords.top+containerY;
+
+  CloseHandle(handle);
+*/
+
+  int i=0, j;
+
+  HDC dc = GetDC(NULL);
+  COLORREF _pixel[18];
+  int _red[18];
+
+  int posx = work->pos.x;
+  int posy = work->pos.y;
+
+  while(-1){
+    j=-4;
+    for(i=0;i<9;i++){
+      _pixel[i] = GetPixel(dc, posx+j, posy);
+      _red[i] = GetRValue(_pixel[i]);
+      j++;
+    }
+
+    Sleep(1000); //each 1s icon of cooldown skill changes
+
+    j=-4;
+    for(i=9;i<18;i++){
+      _pixel[i] = GetPixel(dc, posx+j, posy);
+      _red[i] = GetRValue(_pixel[i]);
+      j++;
+    }
+
+    if((_red[0] != _red[9])||
+        (_red[1] != _red[10])||
+        (_red[2] != _red[11])||
+        (_red[3] != _red[12])||
+        (_red[4] != _red[13])||
+        (_red[5] != _red[14])||
+        (_red[6] != _red[15])||
+        (_red[7] != _red[16])||
+        (_red[8] != _red[17])
+      ){
+//      printf("m1 is on cooldown!\n");
+      m1 = 0;
+    }else{
+//      printf("m1 is ready!\n");
+      m1 = 1;
+    }
+  }
+  //printf("fishing finished");
+  ReleaseDC(NULL, dc);
+}
+
+
+void eyeOnM1Async(const FunctionCallbackInfo<Value>& args){
+
+  Isolate* isolate = args.GetIsolate();
+
+  WorkPos* work = new WorkPos();
+  work->request.data = work;
+
+  Local<Object> obj = args[0]->ToObject();
+  Local<Value> x = obj->Get(String::NewFromUtf8(isolate, "x"));
+  work->pos.x = x->Uint32Value();
+  Local<Value> y = obj->Get(String::NewFromUtf8(isolate, "y"));
+  work->pos.y = y->Uint32Value();
+
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[1]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  uv_queue_work(uv_default_loop(), &work->request, followMoveM1, NULL);
+
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
+static void followMoveM2(uv_work_t *req){
+
+  WorkPos *work = static_cast<WorkPos*>(req->data);
+
+  int i=0, j;
+
+  HDC dc = GetDC(NULL);
+  COLORREF _pixel[18];
+  int _red[18];
+
+  int posx = work->pos.x+32;
+  int posy = work->pos.y;
+
+  while(-1){
+    j=-4;
+    for(i=0;i<9;i++){
+      _pixel[i] = GetPixel(dc, posx+j, posy);
+      _red[i] = GetRValue(_pixel[i]);
+      j++;
+    }
+
+    Sleep(1000); //each 1s icon of cooldown skill changes
+
+    j=-4;
+    for(i=9;i<18;i++){
+      _pixel[i] = GetPixel(dc, posx+j, posy);
+      _red[i] = GetRValue(_pixel[i]);
+      j++;
+    }
+
+    if((_red[0] != _red[9])||
+        (_red[1] != _red[10])||
+        (_red[2] != _red[11])||
+        (_red[3] != _red[12])||
+        (_red[4] != _red[13])||
+        (_red[5] != _red[14])||
+        (_red[6] != _red[15])||
+        (_red[7] != _red[16])||
+        (_red[8] != _red[17])
+      ){
+      m2 = 0;
+    }else{
+      m2 = 1;
+    }
+  }
+  //printf("fishing finished");
+  ReleaseDC(NULL, dc);
+}
+
+void eyeOnM2Async(const FunctionCallbackInfo<Value>& args){
+
+  Isolate* isolate = args.GetIsolate();
+
+  WorkPos* work = new WorkPos();
+  work->request.data = work;
+
+  Local<Object> obj = args[0]->ToObject();
+  Local<Value> x = obj->Get(String::NewFromUtf8(isolate, "x"));
+  work->pos.x = x->Uint32Value();
+  Local<Value> y = obj->Get(String::NewFromUtf8(isolate, "y"));
+  work->pos.y = y->Uint32Value();
+
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[1]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  uv_queue_work(uv_default_loop(), &work->request, followMoveM2, NULL);
+
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
 void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "setScreenConfig", setScreenConfigSync);
   NODE_SET_METHOD(exports, "getBattleList", printBattleListAsync);
@@ -1045,6 +1477,9 @@ void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "checkChangeBattlelist", checkChangeBlAsync);
   NODE_SET_METHOD(exports, "fish", fishAsync);
   NODE_SET_METHOD(exports, "finishDebugging", finishDebugging);
+  NODE_SET_METHOD(exports, "initMovesetContainer", initMovesetContainerAsync);
+  NODE_SET_METHOD(exports, "eyeOnM1", eyeOnM1Async);
+  //NODE_SET_METHOD(exports, "eyeOnM2", eyeOnM2Async);
 }
 
 NODE_MODULE(sharex, init)
@@ -1065,7 +1500,7 @@ void printCreature(DWORD pid, DWORD_PTR creatureAddr){
   //printf("Name %d ", c);
 
   if(c != 0){
-    printf("\n--------  Creature  0x%llX %lld -------\n", creatureAddr, creatureAddr);
+    printf("\n--------  Creature  0x%X %d -------\n", creatureAddr, creatureAddr);
 
     ReadProcessMemory(handle, (LPDWORD)(nameAddr), &str, 15, NULL);
     ReadProcessMemory(handle, (LPDWORD)(creatureAddr+0xC), &x, 4, NULL);
