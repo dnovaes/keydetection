@@ -30,6 +30,17 @@ struct Work{
   POINT pos;
 };
 
+//global var
+
+//Directx9
+//pointer to fishing status address (copied from battlelist.cc)
+const DWORD_PTR BASEADDR_FISHING  = 0x002EA83C;
+const DWORD_PTR OFFSET_FISHING_P1 = 0x54;
+const DWORD_PTR OFFSET_FISHING_P2 = 0x4;
+
+int pid;
+DWORD_PTR moduleAddr;
+
 static void setCursorPos(uv_work_t *req){
 
   //POINT pt;
@@ -155,25 +166,34 @@ static void getColorFishing(uv_work_t *req){
   int _green[5];
 	  //int _blue[2];
 
-  SetCursorPos(work->pos.x, work->pos.y);
+  HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+  DWORD address;
+  int x, y;
+  byte fishStatus = 3; //3 = fishing, 2 = normal
 
+  //SetCursorPos(work->pos.x, work->pos.y);
+  x = work->pos.x;
+  y = work->pos.y;
   Sleep(6000);
 
   HDC dc = GetDC(NULL);
   COLORREF _pixel[5];
 
-  while(i<NSAMPLES){
+  while(i<NSAMPLES && fishStatus==3){
 
-    _pixel[0] = GetPixel(dc, work->pos.x-2, work->pos.y);
-    _pixel[1] = GetPixel(dc, work->pos.x-1, work->pos.y);
-    _pixel[2] = GetPixel(dc, work->pos.x, work->pos.y);
-    _pixel[3] = GetPixel(dc, work->pos.x+1, work->pos.y);
-    _pixel[4] = GetPixel(dc, work->pos.x+2, work->pos.y);
+
+    _pixel[0] = GetPixel(dc, x-2, y);
+    _pixel[1] = GetPixel(dc, x-1, y);
+    _pixel[2] = GetPixel(dc, x, y);
+    _pixel[3] = GetPixel(dc, x+1, y);
+    _pixel[4] = GetPixel(dc, x+2, y);
 
     for(j=0;j<5;j++){
       _red[j] = GetRValue(_pixel[j]);
       _green[j] = GetGValue(_pixel[j]);
-      if((_red[j] < 20)&&(_green[j] > 100)){
+      //printf("Red: %d, Green: %d\n", _red[j], _green[j]);
+      //printf("%d, %d\n", x, y);
+      if(((_red[j] < 20)&&(_green[j] > 100))||(_green[j] == 255)){
         //printf("Red: 0x%02x %d\n", _red[0], _red[0]);
         //printf("Green: 0x%02x %d\n", _green[0], _green[0]);
         i=NSAMPLES;
@@ -182,23 +202,17 @@ static void getColorFishing(uv_work_t *req){
         Sleep(50);
       }
     }
-      //_blue[0] = GetBValue(_pixel);
-/*
-    printf("Red: 0x%02x %d\n", _red[0], _red[0]);
-    printf("Green: 0x%02x %d\n", _green[0], _green[0]);
-    //printf("Blue: 0x%02x %d\n", _blue[0], _blue[0]);
+    //_blue[0] = GetBValue(_pixel);
 
-	  printf("Red: 0x%02x %d\n", _red[1], _red[1]);
-    printf("Green: 0x%02x %d\n", _green[1], _green[1]);
+    ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_FISHING), &address, sizeof(DWORD), NULL);
+    ReadProcessMemory(handle, (LPDWORD)(address+OFFSET_FISHING_P1), &address, sizeof(DWORD), NULL);
+    ReadProcessMemory(handle, (LPDWORD)(address+OFFSET_FISHING_P2), &fishStatus, 1, NULL);
 
-	  printf("Red: 0x%02x %d\n", _red[2], _red[2]);
-    printf("Green: 0x%02x %d\n", _green[2], _green[2]);
-
-    printf("\n");
-*/
-    //printf("%d\n", i);
+    //printf("fishing status [mouse]: %d\n", fishStatus);
+    //printf("%d, %d\n", work->pos.x, work->pos.y);
     i++;
   }
+  printf("fishing status [mouse]: %d\n", fishStatus);
   //printf("fishing finished");
   ReleaseDC(NULL, dc);
 }
@@ -234,12 +248,15 @@ void getColorFishingAsync(const FunctionCallbackInfo<Value>& args){
   Local<Value> y = posObj->Get(String::NewFromUtf8(isolate, "y"));
   work->pos.y = y->Uint32Value();
 
+  pid = args[1]->Int32Value();
+  moduleAddr = args[2]->Int32Value();
+
   //posObj->Set(String::NewFromUtf8(isolate, "x"), Number::New(isolate, x->Uint32Value()));
   //posObj->Set(String::NewFromUtf8(isolate, "y"), Number::New(isolate, y->Uint32Value()));
   //work->ppos.Reset(isolate, posObj);
 
   //store the callback from JS in the work package to invoke later
-  Local<Function> callback = Local<Function>::Cast(args[1]);
+  Local<Function> callback = Local<Function>::Cast(args[3]);
   work->callback.Reset(isolate, callback);
 
   //worker thread using libuv
