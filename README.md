@@ -9,8 +9,9 @@ Install nodejs from the official website (6.11+, with npm of course)
 Install as global, node-gyp and windows-build-tools for python2.7 and Microsoft Visual C++ DevLib
 ```
 npm install -g node-gyp
-npm install -g --production windows-build-tools
+npm install -g --add-python-to-path --production windows-build-tools
 ```
+if have already python installed in your pc, remove '--add-python-to-path' from last command before execute.
 
 git clone this project and install dependencies
 ```
