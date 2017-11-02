@@ -15,6 +15,8 @@ var battlePokelist = {};
 var searchPokeArr= ["Magikarp", "Rattata"];
 var lock = new AsyncLock();
 var locktarget = new AsyncLock();
+var moduleAddr = 0;
+var pid = 0;
 
 var center = {
   "x": 0,
@@ -24,7 +26,7 @@ var sqm = {
   "length": 0,
   "height": 0
 }
-var counterBattlelist = 168; //=0
+var counterBattlelist = 168; // === 0
 var fBtnScreenCoords = 0;
 
 
@@ -97,29 +99,34 @@ addon.registerHKF10Async(function(res){
 
 bl.getBattleList(function(res){
   let i;
-  switch(res.type){
-    case -100:
-      res.type = "NPC";
-      break;
-    case 32:
-    case 92:
-      res.type = "PLAYER";
-      break;
-    //case 112:
-    case 204:
-      res.type = "POKEMON";
-      if((battlePokelist[res.addr]==0)||(battlePokelist[res.addr]==undefined)){
-        for(i=0;i<searchPokeArr.length;i++){
-          if(searchPokeArr[i] == res.name){
-            console.log(res.addr, res.name);
-            battlePokelist[res.addr] = {"addr": res.addr, "name": res.name, "type": res.type}
-            break;
+  if(res.fAction == 2){
+    switch(res.type){
+      case -100:
+        res.type = "NPC";
+        break;
+      case 32:
+      case 92:
+        res.type = "PLAYER";
+        break;
+      //case 112:
+      case 204:
+        res.type = "POKEMON";
+        if((battlePokelist[res.addr] === 0)||(battlePokelist[res.addr] === undefined)){
+          for(i=0;i<searchPokeArr.length;i++){
+            if(searchPokeArr[i] == res.name){
+              //console.log(res.addr, res.name);
+              battlePokelist[res.addr] = {"addr": res.addr, "name": res.name, "type": res.type}
+              break;
+            }
           }
         }
-      }
-      break;
+        break;
+    }
+    //console.log(res.addr.toString(16).toUpperCase(), res.name, res.type)
+  }else{
+    moduleAddr = res.moduleAddr;
+    pid = res.pid;
   }
-  //console.log(res.addr.toString(16).toUpperCase(), res.name, res.type)
 });
 
 var fLookForFighting = 0;
