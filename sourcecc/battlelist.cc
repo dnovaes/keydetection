@@ -57,6 +57,7 @@ struct Work{
   //stores the javascript callback function, persistent means: store in the heap
   Persistent<Function> callback;
   DWORD_PTR creatureAddr;
+  int fAction; //indicates type of action that is gonna occurs in async sygnal: 1 -> send process adress, 2 -> send creature address
 };
 
 struct WorkPkm{
@@ -268,10 +269,9 @@ static void printBattleList(uv_work_t *req){
   }
   CloseHandle(snapshot);
 
-
+  //When program gets SIGINT, it will trigger the function signal_callback_handler to execute
   signal(SIGINT, signal_callback_handler);
-  printf("pid: %d \n",getpid());
-
+  //printf("pid: %d \n", getpid());
 
   moduleAddr = 0;
   //get pointer to module adress and also prints module name
@@ -307,7 +307,20 @@ static void printBattleList(uv_work_t *req){
   //print all threads
   //printThreads(pid);
 
-  printf(" ---- DEBUG STARTING ----\n");
+  //initiate lock to open another thread async right away
+  uv_rwlock_init(&numlock);
+  //send back information about pid and moduleAddress
+  work->fAction = 1;
+
+  //init baton (work) with static values. Required to run the next command (uv_async_send)
+  work->async.data = (void*) req;
+  uv_async_send(&work->async);
+
+  while(mutex == 0){
+    printf("waiting for mutex %d\n", mutex);
+  }
+
+  printf("\n ---- DEBUG STARTING ----\n");
 
   //privileges();
   //adress to put a breakpoint
@@ -332,7 +345,6 @@ static void printBattleList(uv_work_t *req){
   if(fDebugActive){
 
     //ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS | CONTEXT_INTEGER | CONTEXT_CONTROL | THREAD_SET_CONTEXT;
-    uv_rwlock_init(&numlock);
     DEBUG_EVENT dbgEvent;
 
     printf("\n");
@@ -355,8 +367,7 @@ static void printBattleList(uv_work_t *req){
     SetThreadContext(hThread, &ctx);
     ResumeThread(hThread);
 
-    //init baton (work) with static values
-    work->async.data = (void*) req;
+    work->fAction = 2;
 
     while (!fDebugWhileEvent){
 
@@ -560,7 +571,7 @@ void printThreads(DWORD pid){
 }
 
 
-
+//also sends info process adresses once when process is starting
 void sendSygnalCreatureAddr(uv_async_t *handle) {
   uv_rwlock_rdlock(&numlock);
   mutex = 0;
@@ -581,20 +592,30 @@ const DWORD_PTR OFFSET_PKM_POSZ   = 0x14; //byte
 const DWORD_PTR OFFSET_PKM_LIFE   = 0x38; //byte
 */
 
-  DWORD_PTR entityAddr = work->creatureAddr;
-  char entityName[16];
-  byte entityType;
-
-  HANDLE handlep = OpenProcess(PROCESS_VM_READ, FALSE, pid);
-  ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28), &entityName, 16, NULL);
-  ReadProcessMemory(handlep, (LPDWORD)(entityAddr), &entityType, 1, NULL);
-  CloseHandle(handlep); //close handle of process
-  //printf("entityName: %s, Type: %d, Address: 0x%X\n", entityName, entityType, entityAddr);
-
   Local<Object> obj = Object::New(isolate);
-  obj->Set(String::NewFromUtf8(isolate, "addr"), Number::New(isolate, entityAddr));
-  obj->Set(String::NewFromUtf8(isolate, "name"), String::NewFromUtf8(isolate, entityName));
-  obj->Set(String::NewFromUtf8(isolate, "type"), Number::New(isolate, entityType));
+
+  if(work->fAction == 2){
+    DWORD_PTR entityAddr = work->creatureAddr;
+    char entityName[16];
+    byte entityType;
+
+    HANDLE handlep = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+    ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28), &entityName, 16, NULL);
+    ReadProcessMemory(handlep, (LPDWORD)(entityAddr), &entityType, 1, NULL);
+    CloseHandle(handlep); //close handle of process
+    //printf("entityName: %s, Type: %d, Address: 0x%X\n", entityName, entityType, entityAddr);
+
+    obj->Set(String::NewFromUtf8(isolate, "addr"), Number::New(isolate, entityAddr));
+    obj->Set(String::NewFromUtf8(isolate, "name"), String::NewFromUtf8(isolate, entityName));
+    obj->Set(String::NewFromUtf8(isolate, "type"), Number::New(isolate, entityType));
+    obj->Set(String::NewFromUtf8(isolate, "fAction"), Number::New(isolate, 2));
+
+  }else{
+    //action == 1. Send process info (pid and moduleAddress)
+    obj->Set(String::NewFromUtf8(isolate, "moduleAddr"), Number::New(isolate, moduleAddr));
+    obj->Set(String::NewFromUtf8(isolate, "pid"), Number::New(isolate, pid));
+    obj->Set(String::NewFromUtf8(isolate, "fAction"), Number::New(isolate, 1));
+  }
 
   Handle<Value> argv[] = {obj};
   //execute the callback
