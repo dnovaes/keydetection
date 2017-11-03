@@ -164,7 +164,7 @@ static void getColorFishing(uv_work_t *req){
   int NSAMPLES = 210;
   int _red[5];
   int _green[5];
-	  //int _blue[2];
+	//int _blue[2];
 
   HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
   DWORD address;
@@ -174,7 +174,11 @@ static void getColorFishing(uv_work_t *req){
   //SetCursorPos(work->pos.x, work->pos.y);
   x = work->pos.x;
   y = work->pos.y;
-  Sleep(6000);
+  Sleep(4000);
+
+  //HWND hDesktopWnd = GetDesktopWindow();
+  //GetWindowRect(hDesktopWnd, &rect);
+  //printf("%d %d\n", rect.right, rect.bottom);
 
   HDC dc = GetDC(NULL);
   COLORREF _pixel[5];
@@ -182,22 +186,30 @@ static void getColorFishing(uv_work_t *req){
   while(i<NSAMPLES && fishStatus==3){
 
 
-    _pixel[0] = GetPixel(dc, x-2, y);
-    _pixel[1] = GetPixel(dc, x-1, y);
-    _pixel[2] = GetPixel(dc, x, y);
-    _pixel[3] = GetPixel(dc, x+1, y);
-    _pixel[4] = GetPixel(dc, x+2, y);
+    _pixel[0] = GetPixel(dc, x-2, y) & 0xFFFFFF;
+    _pixel[1] = GetPixel(dc, x-1, y) & 0xFFFFFF;
+    _pixel[2] = GetPixel(dc, x, y) & 0xFFFFFF;
+    _pixel[3] = GetPixel(dc, x+1, y) & 0xFFFFFF;
+    _pixel[4] = GetPixel(dc, x+2, y) & 0xFFFFFF;
 
     for(j=0;j<5;j++){
       _red[j] = GetRValue(_pixel[j]);
       _green[j] = GetGValue(_pixel[j]);
       //printf("Red: %d, Green: %d\n", _red[j], _green[j]);
       //printf("%d, %d\n", x, y);
-      if(((_red[j] < 20)&&(_green[j] > 100))||(_green[j] == 255)){
+      if((_red[j] < 20)&&(_green[j] > 100)){
         //printf("Red: 0x%02x %d\n", _red[0], _red[0]);
         //printf("Green: 0x%02x %d\n", _green[0], _green[0]);
         i=NSAMPLES;
         break;
+      }else if(_green[j] == 255){
+      //GetDC returns a a point/reference to a temporary object. After your use, the reference will eventually disappear.
+      //Documentation: GetDC: The pointer may be temporary and should not be stored for later use.
+        printf("[Fishing] Error: dc lost reference to device context. Getting reference again...\n\n");
+        ReleaseDC(NULL, dc);
+        dc = GetDC(NULL);
+        j = 5;
+        Sleep(50);
       }else{
         Sleep(50);
       }
