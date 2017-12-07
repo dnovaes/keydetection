@@ -31,6 +31,13 @@ Note: If you're using Linux Bash for Windows, [see this guide](https://www.howto
 
 # NOTES
 
+- if you are going to run a node file and not use the electron app, you have to compile the binaries of the
+native modules using the code below
+```
+node-gyp configure
+node-gyp build
+```
+
 if you change your resolution or the game resolution, you need to reconfigure the screen coordinates by clicking in the
 monitor button again.
 
