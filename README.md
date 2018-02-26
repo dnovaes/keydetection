@@ -1,7 +1,13 @@
-# Keydetection
+# Bobito's App
 
-program that detects key even if program isnt focused [temp]. Uses nodejs, C and electron to connect
-both. (Windows ONLY)
+Virtual Assistant Application for a specific game (Tibia Platform) for Learning Purposes in Security Area involving:
+- Code Injection
+- Memory Reading
+- Intercomunication between client and a external program.
+
+App Requisites:
+- Windows ONLY
+- Cliente Dx9 version
 
 # Installation
 
@@ -40,6 +46,20 @@ node-gyp build
 
 if you change your resolution or the game resolution, you need to reconfigure the screen coordinates by clicking in the
 monitor button again.
+
+# Packaging and Compiling own version
+
+Install electron-packager. I build my version using NPM 5.4.1 > 5.6.0.
+```
+npm install electron-packager -g
+```
+
+Go to source project folder and run:
+
+```
+electron-packager ./ BobitoBot --platform=win32 --arch=x64 --asar=true
+electron-packager ./ BobitoBot --platform=win32 --arch=ia32 --asar=true --prune=true
+```
 
 ## Resources for Learning Electron
 
