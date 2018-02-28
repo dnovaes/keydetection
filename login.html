@@ -50,6 +50,9 @@
     const {remote, shell} = require('electron');
     const crypto = require('crypto');
 
+    let hash = crypto.createHash('sha256');
+    password = hash.update("test").digest('hex').toString();
+
     let loginBt = document.querySelector("#login_button");
     let loginIcon = document.querySelector("#login_button img");
 
@@ -92,9 +95,10 @@
           if (this.readyState == 4 && this.status == 200) {
             data = JSON.parse(xhttp.response);
             console.log(xhttp);
+
             if(data.fLogin == 1){
               remote.getCurrentWindow().loadURL(`file://${__dirname}/index.html`);
-              remote.getCurrentWindow().setSize(460, 300);
+              remote.getCurrentWindow().setSize(500, 300);
             }else{
               alert("Username or Password incorrect");
             }
@@ -103,8 +107,7 @@
             console.log(xhttp);
           }
         }
-        //xhttp.open("POST", "http://localhost:3000/gloin", true);
-        xhttp.open("POST", "http://bobito-cc.umbler.net/gloin", true);
+        xhttp.open("POST", "https://bobito.herokuapp.com/gloin", true);
         xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
         xhttp.send(`username=${username}&password=${password}`);
       }
