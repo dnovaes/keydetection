@@ -6,6 +6,7 @@ html{
 body{
   background: url("../img/textures_dark_vertical.jpg") repeat;
   overflow: hidden;
+  height: 262px;
 }
 
 #container{
@@ -17,8 +18,8 @@ body{
 #container-right{
   width: 200px;
   height: auto;
-  float: right;
   padding-right: 30px;
+  margin-left: 200px;
 }
 
 @font-face{
@@ -131,7 +132,7 @@ body{
 }
 
 #console{
-  width: 215px;
+  width: 245px;
   height: 70px;
   color: #f7e53f;
   padding: 2px;
