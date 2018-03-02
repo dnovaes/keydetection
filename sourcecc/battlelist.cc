@@ -107,7 +107,9 @@ int m4 = 0;
 
 /* DIRECTX9 */
 //global allocations (with AOB injection)
-const DWORD_PTR BASEADDR_CREATURE_GENERATOR = 0x05AF0000; //_creatureBase
+const DWORD_PTR BASEADDR_CREATURE_GENERATOR = 0x0ADE0000; //_creatureBase
+//code cave with fixed address of the game
+const DWORD_PTR BASEADDR_CREATURE_GEN       = 0x00717D4F
 //adress for position change (writes into pokemon pos. when something moves in screen)
 const DWORD_PTR INSTR_POSADDR               = 0x1461A4;
 //use moduleAddress as base
@@ -300,7 +302,7 @@ static void printBattleList(uv_work_t *req){
   printf("iniciando deteccao de pokemons\n");
   do{
 
-    ReadProcessMemory(handlep, (LPDWORD)(BASEADDR_CREATURE_GENERATOR), &entityAddr, 4, NULL);
+    ReadProcessMemory(handlep, (LPDWORD)(BASEADDR_CREATURE_GEN), &entityAddr, 4, NULL);
     entityAddr = entityAddr-0x28;
     ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x24), &entityNumLetters, 1, NULL);
     ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28), &entityName, 16, NULL);
