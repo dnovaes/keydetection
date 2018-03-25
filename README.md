@@ -12,12 +12,21 @@ App Requisites:
 # Installation
 
 Install nodejs from the official website (6.11+, with npm of course)
-Install as global, node-gyp and windows-build-tools for python2.7 and Microsoft Visual C++ DevLib
+Install as global: node-gyp, windows-build-tools for python2.7 and Microsoft Visual C++ DevLib using the command bellow.
 ```
 npm install -g node-gyp
-npm install -g --add-python-to-path --production windows-build-tools
+npm install -g --production windows-build-tools
 ```
-if have already python installed in your pc, remove '--add-python-to-path' from last command before execute.
+
+After receiving the message of success. You have to add python to path. The enviroment path variables at windows stays at the global variable "PATH". You can check if python is already added in path by typing:
+
+```
+echo $PATH
+```
+
+To add python variable to path, check first where is your python2.7 path, go to control painel of your windows and add the path at the end of PATH variable as the picture below shows.
+
+![python27-path](https://i.imgur.com/gaVdnMA.png)
 
 git clone this project and install dependencies
 ```
@@ -26,7 +35,7 @@ cd keydetection/
 npm install
 ```
 
-Now the magic as the last step, rebuild your native modules for electron to work even with your other
+Now the magic as the last step. Rebuild your native modules for electron to work even with your other
 native modules (C++ in this case). And start the application.
 ```
 ./node_modules/.bin/electron-rebuild.cmd
@@ -37,14 +46,13 @@ Note: If you're using Linux Bash for Windows, [see this guide](https://www.howto
 
 # NOTES
 
-- if you are going to run a node file and not use the electron app, you have to compile the binaries of the
-native modules using the code below
+- if you are going to run a node file and you are not using the electron app (index.js), compile the binaries of the native modules using the code below
 ```
 node-gyp configure
 node-gyp build
 ```
 
-if you change your resolution or the game resolution, you need to reconfigure the screen coordinates by clicking in the
+To change your resolution or the game resolution, you need to reconfigure the screen coordinates by clicking in the
 monitor button again.
 
 # Packaging and Compiling own version
