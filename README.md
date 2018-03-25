@@ -12,19 +12,22 @@ App Requisites:
 # Installation
 
 Install nodejs from the official website (6.11+, with npm of course)
-Install as global: node-gyp, windows-build-tools for python2.7 and Microsoft Visual C++ DevLib using the command bellow.
+Install as global: node-gyp, windows-build-tools for python2.7 and Microsoft Visual C++ DevLib using the command bellow. Don't forget to execute CLI of the windows as admninistrator power. Do not use git bash or other unix substitute for windows to run this.
+
 ```
 npm install -g node-gyp
-npm install -g --production windows-build-tools
+npm install -g --add-python-to-path='true' --production windows-build-tools
 ```
 
-After receiving the message of success. You have to add python to path. The enviroment path variables at windows stays at the global variable "PATH". You can check if python is already added in path by typing:
+After receiving the message of success. Like this one
+![success-install](https://i.imgur.com/Z6ITFwb.png)
 
+You can check if python is already added in path by typing:
 ```
 echo $PATH
 ```
 
-To add python variable to path, check first where is your python2.7 path, go to control painel of your windows and add the path at the end of PATH variable as the picture below shows.
+If not, you have to add python to path. The enviroment path variables at windows stays at the global variable "PATH". To add python variable to path, check first where is your python2.7 path, go to control painel of your windows and add the path at the end of PATH variable as the picture below shows.
 
 ![python27-path](https://i.imgur.com/gaVdnMA.png)
 
@@ -43,6 +46,15 @@ npm start
 ```
 
 Note: If you're using Linux Bash for Windows, [see this guide](https://www.howtogeek.com/261575/how-to-run-graphical-linux-desktop-applications-from-windows-10s-bash-shell/) or use `node` from the command prompt.
+
+# ISSUES
+
+if you still have any issues with python enviroment variables, check this thread: https://github.com/felixrieseberg/windows-build-tools/issues/56
+Also a good could be reseting ur config python variables at npm and reinstall everything. To reset python config:
+
+```
+npm config set python ""
+```
 
 # NOTES
 
