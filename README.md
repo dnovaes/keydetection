@@ -20,6 +20,7 @@ npm install -g --add-python-to-path='true' --production windows-build-tools
 ```
 
 After receiving the message of success. Like this one
+
 ![success-install](https://i.imgur.com/Z6ITFwb.png)
 
 You can check if python is already added in path by typing:
@@ -27,7 +28,7 @@ You can check if python is already added in path by typing:
 echo $PATH
 ```
 
-If not, you have to add python to path. The enviroment path variables at windows stays at the global variable "PATH". To add python variable to path, check first where is your python2.7 path, go to control painel of your windows and add the path at the end of PATH variable as the picture below shows.
+If not... stay a while and listen :]. The enviroment path variables at windows stays at the global variable "PATH". To add python variable to path, check first where is your python2.7 path, go to control painel of your windows and add the path at the end of PATH variable as the picture below shows.
 
 ![python27-path](https://i.imgur.com/gaVdnMA.png)
 
