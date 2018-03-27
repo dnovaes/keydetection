@@ -48,7 +48,7 @@ npm start
 
 Note: If you're using Linux Bash for Windows, [see this guide](https://www.howtogeek.com/261575/how-to-run-graphical-linux-desktop-applications-from-windows-10s-bash-shell/) or use `node` from the command prompt.
 
-# ISSUES
+# Issues
 
 if you still have any issues with python enviroment variables, check this thread: https://github.com/felixrieseberg/windows-build-tools/issues/56
 Also a good could be reseting ur config python variables at npm and reinstall everything. To reset python config:
@@ -57,7 +57,18 @@ Also a good could be reseting ur config python variables at npm and reinstall ev
 npm config set python ""
 ```
 
-# NOTES
+If you are having issues with windows node modules. i,e, messages likes this in the console of electron app:
+
+check this project README. Most of time it is a problem due to different node versions between electron-rebuild node version and your systema node installed version. 
+https://github.com/electron/electron-rebuild
+
+TDLR: Try to update ur electron-rebuild package (npm install --save-dev electron-rebuild) or reinstall a diff node version. Remember to always execute 
+```
+./node_modules/.bin/electron-rebuild.cmd
+```
+before ```npm start```
+
+# Notes
 
 - if you are going to run a node file and you are not using the electron app (index.js), compile the binaries of the native modules using the code below
 ```
