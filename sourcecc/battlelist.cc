@@ -109,7 +109,7 @@ int m4 = 0;
 //global allocations (with AOB injection)
 const DWORD_PTR BASEADDR_CREATURE_GENERATOR = 0x0ADE0000; //_creatureBase
 //code cave with fixed address of the game
-const DWORD_PTR BASEADDR_CREATURE_GEN       = 0x00717D4F
+const DWORD_PTR BASEADDR_CREATURE_GEN       = 0x00717D4F;
 //adress for position change (writes into pokemon pos. when something moves in screen)
 const DWORD_PTR INSTR_POSADDR               = 0x1461A4;
 //use moduleAddress as base
@@ -1200,10 +1200,12 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
   SendInput(1,&input,sizeof(INPUT));
 
-  Sleep(50);
+  Sleep(30);
 
   //point to pkmslot and use selected revive
   SetCursorPos(pkmSlot.x, pkmSlot.y);
+
+  Sleep(50);
 
   input.type      = INPUT_MOUSE;
   input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
@@ -1215,30 +1217,77 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   input.mi.dwFlags  = MOUSEEVENTF_LEFTUP;
   SendInput(1,&input,sizeof(INPUT));
 
-  Sleep(50);
+  Sleep(30);
 
   //summon pokemon
   SetCursorPos(pkmSlot.x, pkmSlot.y);
 
-  Sleep(100);
+  Sleep(120);
 
   ::ZeroMemory(&input,sizeof(INPUT));
   input.type      = INPUT_MOUSE;
   input.mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
   SendInput(1,&input,sizeof(INPUT));
 
-  Sleep(50);
+  Sleep(70);
 
   input.type      = INPUT_MOUSE;
   input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
   SendInput(1,&input,sizeof(INPUT));
 
-  Sleep(50);
-
   Local<Number> val = Number::New(isolate, 1);
   Handle<Value> argv[] = {val};
 
   args.GetReturnValue().Set(val);
+}
+
+static void registerHkRevivePkm(uv_work_t *req){
+
+  Work *work = static_cast<Work*>(req->data);
+
+  //0x2E (delete)
+  if(RegisterHotKey(NULL, 1, NULL, 0x2E)){
+    MSG msg = {0};
+
+    while (GetMessage(&msg, NULL, 0, 0) != 0){
+      if(msg.message == WM_HOTKEY){
+
+        //UnregisterHotKey(NULL, 1);
+
+        //Communication between threads(uv_work_t and uv_async_t);
+        work->async.data = (void*) req;
+        uv_async_send(&work->async);
+      }
+    }
+  }
+}
+void sendSygnalHkRevivePkm(uv_async_t *handle) {
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+
+  uv_work_t *req = ((uv_work_t*) handle->data);
+  Work *work = static_cast<Work*> (req->data);
+
+  Local<Number> val = Number::New(isolate, 1);
+  Handle<Value> argv[] = {val};
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+}
+void registerHkRevivePkmAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  Work* work = new Work();
+  work->request.data = work;
+
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[0]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  uv_async_init(uv_default_loop(), &work->async, sendSygnalHkRevivePkm);
+  uv_queue_work(uv_default_loop(), &work->request, registerHkRevivePkm, NULL);
+
+  args.GetReturnValue().Set(Undefined(isolate));
 }
 
 void init(Local<Object> exports) {
@@ -1252,6 +1301,7 @@ void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "isPkmNearSync", isPkmNearSync);
   NODE_SET_METHOD(exports, "isPlayerPkmSummoned", isPlayerPkmSummonedSync);
   NODE_SET_METHOD(exports, "revivePkm", revivePkmSync);
+  NODE_SET_METHOD(exports, "registerHkRevivePkm", registerHkRevivePkmAsync);
 }
 
 NODE_MODULE(battlelist, init)

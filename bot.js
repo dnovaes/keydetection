@@ -16,6 +16,7 @@ var lock = new AsyncLock();
 var locktarget = new AsyncLock();
 var moduleAddr = 0;
 var pid = 0;
+var fRevive = 0;
 
 var center = {
   "x": 0,
@@ -142,6 +143,8 @@ function updateScreenCoords(res){
   });
 }
 
+// ============  Global Bot Hotkeys =====================
+
 addon.registerHKF10Async(function(res){
   console.log("F10 key detected!!");
 
@@ -150,8 +153,16 @@ addon.registerHKF10Async(function(res){
   }else{
     alert(`Configure a tela do seu pokemon pelo bot antes de iniciar`);
   }
-  //let reviveStatus = bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
 });
+
+bl.registerHkRevivePkm(function(res){
+  if(fRevive === 1){
+    //console.log("REVIVE key detected!!");
+    bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
+  }
+});
+
+// ============  Feature Buttons =====================
 
 
 divFishing = document.getElementById("fishing");
@@ -165,6 +176,32 @@ divFishing.addEventListener("click", function(){
     prepareForFishing();
   }else{
     alert(`Configure a tela do seu pokemon pelo bot antes de iniciar`);
+  }
+});
+
+divRevive = document.getElementById("revive");
+divRevive.addEventListener("click", function(){
+  if(fRevive === 0){
+    fRevive=2; //cursorPosbyClick is waiting for a response
+
+    //getting pkm slot pos
+    mouse.getCursorPosbyClick(function(res){
+      console.log(`PkmSlot) res.x: ${res.x} res.y: ${res.y}`);
+      pos.pkmSlot.x = res.x;
+      pos.pkmSlot.y = res.y;
+    });
+
+    //getting revive slot pos
+    mouse.getCursorPosbyClick(function(res){
+      console.log(`ReviveSlot) res.x: ${res.x} res.y: ${res.y}`);
+      pos.reviveSlot.x = res.x;
+      pos.reviveSlot.y = res.y;
+      divRevive.style.background = 'linear-gradient(#774247, #f7e53f)';
+      fRevive=1;
+    });
+  }else if (fRevive === 1){
+    divRevive.style.background = 'linear-gradient(red, #774247)';
+    fRevive=0;
   }
 });
 
@@ -203,7 +240,7 @@ function startFishing(){
     //test if player's pokemon is out of pokebal.. if not use revive and summon it //sync function
     fPkmSummoned = bl.isPlayerPkmSummoned();
     console.log(`is pokemon summoned? ${fPkmSummoned.status}`);
-    if(fPkmSummoned.status == "1"){
+    if(fPkmSummoned.status == "1" && fRevive === 1){
       bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
     }
 
@@ -227,7 +264,7 @@ function startFishing(){
 
       //test if player's pokemon is out of pokebal.. if not use revive and summon it //sync function
       fPkmSummoned = bl.isPlayerPkmSummoned();
-      if(fPkmSummoned.status == "1"){
+      if(fPkmSummoned.status == "1" && fRevive === 1){
         bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
       }
 
@@ -235,7 +272,7 @@ function startFishing(){
       console.log("lockmouse released");
       //test if player's pokemon is out of pokebal.. if not use revive and summon it //sync function
       fPkmSummoned = bl.isPlayerPkmSummoned();
-      if(fPkmSummoned.status == "1"){
+      if(fPkmSummoned.status == "1" && fRevive === 1){
         bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
       }
 
@@ -243,6 +280,8 @@ function startFishing(){
       if(fishStatus != 2){
         //wait for the change of color, press CTRL+Z when the fish appears
         console.log("Waiting for fish to fish....");
+
+        let fish;
 
         mouse.getColorFishing({
           "x": coords.x, "y": coords.y
@@ -254,7 +293,7 @@ function startFishing(){
 
               //test if player's pokemon is out of pokebal.. if not use revive and summon it //sync function
               fPkmSummoned = bl.isPlayerPkmSummoned();
-              if(fPkmSummoned.status == "1"){
+              if(fPkmSummoned.status == "1" && fRevive === 1){
                 bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
               }
               //IF pause is not requested, continue Fishing
@@ -270,7 +309,7 @@ function startFishing(){
       }else{
         //test if player's pokemon is out of pokebal.. if not use revive and summon it //sync function
         fPkmSummoned = bl.isPlayerPkmSummoned();
-        if(fPkmSummoned.status == "1"){
+        if(fPkmSummoned.status == "1" && fRevive === 1){
           bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
         }
 
