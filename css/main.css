@@ -16,10 +16,10 @@ body{
 }
 
 #container-right{
-  width: 200px;
+  width: 300px;
   height: auto;
   padding-right: 30px;
-  margin-left: 200px;
+  margin-left: 172px;
 }
 
 @font-face{
@@ -57,10 +57,29 @@ body{
   margin-top: 8px;
 }
 
-.menu-item > #icon_rod{
-  width: 60px;
-  height: 50px;
+.menu-item-small{
+  -webkit-app-region: no-drag;
+  width: 145px;
+  height: 40px;
+  background: red;
+  background: linear-gradient(#774247, red);
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 8px;
+  margin-right: 4px;
   float:left;
+}
+
+.menu-item-small:hover{
+  border: .3px solid white;
+  background: linear-gradient(red, #774247);
+}
+
+.menu-item-small > .icon-button{
+  width: 38px;
+  height: 38px;
+  float:left;
+  margin-top: 1px;
 }
 
 .menu-item > #icon_tv{
@@ -69,6 +88,19 @@ body{
   margin-top:5px;
   margin-left: 10px;
   float: left;
+}
+
+.menu-item-small > #text{
+  width: 130px;
+  height: 50px;
+
+  color: white;
+  font-family: pokemonh;
+  font-size: 15px;
+  font-weight: bold;
+
+  line-height:35px;
+  text-align:center;
 }
 
 .menu-item > #text{
@@ -83,6 +115,10 @@ body{
 
   line-height:50px;
   text-align:center;
+}
+
+.clear-float{
+  clear:both;
 }
 
 .coord_field{
