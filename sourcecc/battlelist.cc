@@ -102,6 +102,8 @@ int m1 = 0;
 int m2 = 0;
 int m3 = 0;
 int m4 = 0;
+int SCREEN_X = 0;
+int SCREEN_Y = 0;
 
 //const
 
@@ -681,6 +683,7 @@ static void fish(uv_work_t *req){
     // Press the "CTRL" key
     input.ki.wVk = 0x11; // virtual-key code for the "CTRL" key
     input.ki.dwFlags = 0; // 0 for key press
+
     SendInput(1, &input, sizeof(INPUT));
 
     // Press the "Z" key
@@ -1189,49 +1192,69 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   Sleep(50);
 
   INPUT input;
-  ::ZeroMemory(&input,sizeof(INPUT));
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+
   input.type      = INPUT_MOUSE;
+  input.mi.time = 0;
   input.mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
   SendInput(1,&input,sizeof(INPUT));
 
   Sleep(50);
 
   input.type      = INPUT_MOUSE;
+  input.mi.time = 0;
   input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
   SendInput(1,&input,sizeof(INPUT));
 
   Sleep(30);
 
   //point to pkmslot and use selected revive
-  SetCursorPos(pkmSlot.x, pkmSlot.y);
+  //sendinput with mousemovement is smoothly. it simulated mouse movements instead of flickering from a position to another
+  input.type = INPUT_MOUSE;
+  input.mi.dx = pkmSlot.x*65535/SCREEN_X;
+  input.mi.dy = pkmSlot.y*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+  //SetCursorPos(pkmSlot.x, pkmSlot.y);
 
   Sleep(50);
 
   input.type      = INPUT_MOUSE;
+  input.mi.time = 0;
   input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
   SendInput(1,&input,sizeof(INPUT));
 
   Sleep(50);
 
   input.type      = INPUT_MOUSE;
+  input.mi.time = 0;
   input.mi.dwFlags  = MOUSEEVENTF_LEFTUP;
   SendInput(1,&input,sizeof(INPUT));
 
   Sleep(30);
 
   //summon pokemon
-  SetCursorPos(pkmSlot.x, pkmSlot.y);
+  input.type = INPUT_MOUSE;
+  input.mi.dx = pkmSlot.x*65535/SCREEN_X;
+  input.mi.dy = pkmSlot.y*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+  //SetCursorPos(pkmSlot.x, pkmSlot.y);
 
   Sleep(120);
 
-  ::ZeroMemory(&input,sizeof(INPUT));
   input.type      = INPUT_MOUSE;
+  input.mi.time = 0;
   input.mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
   SendInput(1,&input,sizeof(INPUT));
 
   Sleep(70);
 
   input.type      = INPUT_MOUSE;
+  input.mi.time = 0;
   input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
   SendInput(1,&input,sizeof(INPUT));
 
@@ -1244,6 +1267,10 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
 static void registerHkRevivePkm(uv_work_t *req){
 
   Work *work = static_cast<Work*>(req->data);
+
+  //fill the global var screen resolution
+  SCREEN_X = GetSystemMetrics(SM_CXSCREEN);
+  SCREEN_Y = GetSystemMetrics(SM_CYSCREEN);
 
   //0x2E (delete)
   if(RegisterHotKey(NULL, 1, NULL, 0x2E)){
