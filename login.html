@@ -50,6 +50,9 @@
     const {remote, shell} = require('electron');
     const crypto = require('crypto');
 
+    var width = 500;
+    var height = 350;
+
     let hash = crypto.createHash('sha256');
     password = hash.update("test").digest('hex').toString();
 
@@ -98,7 +101,7 @@
 
             if(data.fLogin == 1){
               remote.getCurrentWindow().loadURL(`file://${__dirname}/index.html`);
-              remote.getCurrentWindow().setSize(500, 300);
+              remote.getCurrentWindow().setSize(width, height);
             }else{
               alert("Username or Password incorrect");
             }
