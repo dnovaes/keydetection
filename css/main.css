@@ -6,7 +6,7 @@ html{
 body{
   background: url("../img/textures_dark_vertical.jpg") repeat;
   overflow: hidden;
-  height: 262px;
+  height: 312px;
 }
 
 #container{
@@ -54,7 +54,7 @@ body{
   background: linear-gradient(#774247, red);
   border-radius: 10px;
   cursor: pointer;
-  margin-top: 8px;
+  margin: 8px auto 0px auto;
 }
 
 .menu-item-small{
@@ -70,9 +70,10 @@ body{
   float:left;
 }
 
-.menu-item-small:hover{
+.menu-item-small:hover, .menu-item:hover{
   border: .3px solid white;
   background: linear-gradient(red, #774247);
+  margin-top: 6px;
 }
 
 .menu-item-small > .icon-button{
@@ -82,10 +83,10 @@ body{
   margin-top: 1px;
 }
 
-.menu-item > #icon_tv{
-  width: 40px;
+.menu-item > .icon-button{
+  width: 45px;
   height: auto;
-  margin-top:5px;
+  margin-top: 4px;
   margin-left: 10px;
   float: left;
 }
@@ -104,7 +105,7 @@ body{
 }
 
 .menu-item > #text{
-  width: 130px;
+  width: 120px;
   height: 50px;
   float:left;
 
@@ -115,6 +116,13 @@ body{
 
   line-height:50px;
   text-align:center;
+}
+
+#caveBot span{
+  width:65px;
+  height: 45px;
+  background-image: url("../img/red_champion.png");
+  background-size: cover;
 }
 
 .clear-float{

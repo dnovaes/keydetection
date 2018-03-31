@@ -29,7 +29,7 @@
         <div class="clear-float"></div>
 
         <div class="menu-item" id="screenCoords">
-          <img src="img/tv.png" id="icon_tv">
+          <img src="img/tv.png" class="icon-button">
           <div id="coord_span">
             <div class="coord_element">
               <label for="coordx" class="coord_label">x</label>
@@ -50,6 +50,11 @@
           </div>
         </div>
 
+        <div class="menu-item" id="caveBot">
+          <span class="icon-button"></span>
+          <div id="text">Cave-bot</div>
+        </div>
+
         <div id="console-title">Console:<br></div>
         <div id="console"></div>
 
@@ -59,6 +64,17 @@
 
   <script type="text/javascript">
     console.log(process.versions);
+
+    divCaveBot = document.querySelector("#caveBot");
+    divCaveIcon = document.querySelector("#caveBot span");
+
+    divCaveBot.addEventListener("mouseover", function(){
+      divCaveIcon.style.backgroundImage = "url('./img/red_champion.gif')";
+    });
+
+    divCaveBot.addEventListener("mouseout", function(){
+      divCaveIcon.style.backgroundImage = "url('./img/red_champion.png')";
+    });
   </script>
   <script type="text/javascript" src="bot.js"></script>
 </html>
