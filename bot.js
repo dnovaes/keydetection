@@ -1,10 +1,10 @@
 
-const bl = require("./build/Release/battlelist");
-const sharexNode = require("./build/Release/sharex");
-const keyboard = require("./build/Release/keyboard");
-const focuscc = require("./build/Release/focus");
-const addon = require("./build/Release/addon");
-const mouse = require("./build/Release/mouse");
+const bl = require("../build/Release/battlelist");
+const sharexNode = require("../build/Release/sharex");
+const keyboard = require("../build/Release/keyboard");
+const focuscc = require("../build/Release/focus");
+const addon = require("../build/Release/addon");
+const mouse = require("../build/Release/mouse");
 const AsyncLock = require('async-lock');
 
 //global vars
