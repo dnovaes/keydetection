@@ -1207,7 +1207,7 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
   SendInput(1,&input,sizeof(INPUT));
 
-  Sleep(30);
+  Sleep(50);
 
   //point to pkmslot and use selected revive
   //sendinput with mousemovement is smoothly. it simulated mouse movements instead of flickering from a position to another
@@ -1233,7 +1233,7 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   input.mi.dwFlags  = MOUSEEVENTF_LEFTUP;
   SendInput(1,&input,sizeof(INPUT));
 
-  Sleep(30);
+  Sleep(50);
 
   //summon pokemon
   input.type = INPUT_MOUSE;
@@ -1244,7 +1244,7 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   SendInput(1, &input, sizeof(INPUT));
   //SetCursorPos(pkmSlot.x, pkmSlot.y);
 
-  Sleep(120);
+  Sleep(110);
 
   input.type      = INPUT_MOUSE;
   input.mi.time = 0;
