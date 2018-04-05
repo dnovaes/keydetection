@@ -68,6 +68,16 @@ TDLR: Try to update ur electron-rebuild package (npm install --save-dev electron
 ```
 before ```npm start```
 
+if you are having trouble with running node-gyp alone with a js file (node test.js) maybe your node-gyp variable path is not set properly.
+instead of using:
+```
+C:\Program Files\nodejs\node_modules\npm\node_modules\npm-lifecycle\node-gyp-bin;
+```
+use this in windows path enviroments
+```
+C:\Program Files\nodejs\node_modules\npm\bin\node-gyp-bin;
+```
+
 # Notes
 
 - if you are going to run a node file and you are not using the electron app (index.js), compile the binaries of the native modules using the code below
