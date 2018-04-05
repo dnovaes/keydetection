@@ -9,15 +9,16 @@ body{
   height: 312px;
 }
 
-#container{
+#main-screen{
   margin: 0 auto;
   max-width: 500px;
   height: 190px;
 }
 
-#container-right{
-  width: 300px;
+.content{
+  width: 305px;
   height: auto;
+  padding-top: 10px;
   padding-right: 30px;
   margin-left: 172px;
 }
@@ -74,30 +75,33 @@ body{
   -webkit-app-region: no-drag;
   width: 200px;
   height: 50px;
-  background: red;
   background: linear-gradient(#774247, red);
   border-radius: 10px;
   cursor: pointer;
   margin: 8px auto 0px auto;
+  border: 1px solid transparent;
 }
 
 .menu-item-small{
   -webkit-app-region: no-drag;
   width: 145px;
   height: 40px;
-  background: red;
   background: linear-gradient(#774247, red);
   border-radius: 10px;
   cursor: pointer;
-  margin-top: 8px;
   margin-right: 4px;
+  border: 1px solid transparent;
   float:left;
 }
 
-.menu-item-small:hover, .menu-item:hover{
-  border: .3px solid white;
+.menu-item-small:hover{
+  border: 1px solid white;
   background: linear-gradient(red, #774247);
-  margin-top: 6px;
+}
+
+.menu-item:hover{
+  border: 1px solid white;
+  background: linear-gradient(red, #774247);
 }
 
 .menu-item-small .icon-button span{
@@ -210,5 +214,227 @@ body{
   padding: 2px;
   font-family: monospace;
   overflow-y: scroll;
+}
 
+/*
+ *
+ * Cave bot part
+ *
+*/
+
+#cave-screen > *{
+  color: white;
+}
+
+#cave-screen{
+  margin: 0 auto;
+  max-width: 500px;
+  height: 190px;
+  display: none;
+}
+
+@font-face{
+  font-family: pokemonh;
+  src: url("Pokemon Hollow.ttf");
+}
+
+#container-route{
+  position: relative;
+  width: 37%;
+  height: 100%;
+  float:left;
+}
+
+#container-functions{
+  float:left;
+  width: 30%;
+  height: 100%;
+}
+
+#container-loot{
+  float:left;
+  width: 30%;
+  height: 100%;
+}
+
+#footer{
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 20px;
+  margin-bottom: 10px;
+}
+
+select > *{
+  color: black;}
+select{
+  color: black;
+  -webkit-app-region: no-drag;}
+  #container-route select{
+    width: 95%;
+  }
+
+.container-title{
+  width: 95%;
+  float:left;
+  font-family: pokemonh;
+  font-size: 20px;
+  margin-top: -10px;
+  text-align: center;
+}
+
+.profile-icons{
+  -webkit-app-region: no-drag;
+  position: absolute;
+  right: 0;
+  width: 25%;
+  height: 15px;
+  padding-top: 16px;}
+  .profile-icons .icon-el{
+    border: 1px solid transparent;
+    float: left;
+    width: 15px;
+    text-align: center;
+    font-size: 16px;
+    cursor: pointer;}
+    .profile-icons .icon-el:hover{
+      font-weight: bold;
+      border: 1px solid white;}
+
+.menu-icon{
+  -webkit-app-region: no-drag;
+  position: relative;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.menu-icon:before{
+  content: "\f060";
+  font-family: FontAwesome;
+  font-style: normal;
+  font-weight: normal;
+  text-decoration: inherit;
+}
+
+@import "compass/css3";
+
+ul {
+  -webkit-app-region: no-drag;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  height: 125px;
+  width: 95%;
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+
+.sel-el{
+  width: 100%;
+  padding: 2px;
+  height: 20px; /*font: 200 16px/1.5 Helvetica, Verdana, sans-serif;*/
+  display: list-item;
+  font-family: 'Quicksand';
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  border-bottom: 1px solid #ccc;
+  cursor: default;
+  line-height: 20px;
+  -webkit-transition: font-size 0.3s ease, background-color 0.3s ease;
+  -moz-transition: font-size 0.3s ease, background-color 0.3s ease;
+  -o-transition: font-size 0.3s ease, background-color 0.3s ease;
+  -ms-transition: font-size 0.3s ease, background-color 0.3s ease;
+  transition: font-size 0.3s ease, background-color 0.3s ease;
+}
+
+.sel-el:hover {
+  background: #d2cdcd;
+  color: red;
+  font-weight:bold;
+  height: 25px;
+  line-height: 25px;
+}
+
+li:last-child {
+  border: none;
+}
+
+
+.features{
+  -webkit-app-region: no-drag;
+  float: left;
+}
+
+.features .feature-el{
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  float: left;
+  border: 1px solid transparent;
+}
+
+.features div:hover{
+  border: 1px solid white;
+}
+
+.features div:active{
+  border: 1px solid red;
+}
+
+#checkpoint{
+  background: url("../img/checkpoint.png") no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+
+#click{
+  background: url("../img/click.png") no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+
+#keyboard{
+  background: url("../img/keyboard.png") no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+
+#move{
+  background: url("../img/move.png") no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+
+#battle{
+  background: url("../img/battle.png") no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+
+#timer{
+  background: url("../img/timer.png") no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+
+.sel-text{
+  width: 85%;
+  float: left;
+}
+
+.remove-el{
+  width: 7%;
+  float: left;
+  cursor: pointer;
+}
+
+.remove-el:before{
+  content: "\f056";
+  font-family: FontAwesome;
+  font-style: normal;
+  font-weight: normal;
+  text-decoration: inherit;
 }

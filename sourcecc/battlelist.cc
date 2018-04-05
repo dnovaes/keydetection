@@ -114,10 +114,10 @@ const DWORD_PTR BASEADDR_CREATURE_GENERATOR = 0x0ADE0000; //_creatureBase
 const DWORD_PTR BASEADDR_CREATURE_GEN       = 0x00717D4F;
 //adress for position change (writes into pokemon pos. when something moves in screen)
 const DWORD_PTR INSTR_POSADDR               = 0x1461A4;
-//use moduleAddress as base
-const DWORD_PTR OFFSET_PLAYER_POSX          = 0x38F840;
-const DWORD_PTR OFFSET_PLAYER_POSY          = 0x38F844;
-const DWORD_PTR OFFSET_PLAYER_POSZ          = 0x38F848;
+//use moduleAddress as base (4 bytes) - 04/04
+const DWORD_PTR OFFSET_PLAYER_POSX          = 0x395840;
+const DWORD_PTR OFFSET_PLAYER_POSY          = 0x395850;
+const DWORD_PTR OFFSET_PLAYER_POSZ          = 0x395854; //1 byte is enough here
 //use creatureAddress as base
 const DWORD_PTR OFFSET_PKM_NAME_LENGTH      = 0x24; //byte
 const DWORD_PTR OFFSET_PKM_NAME             = 0x28;
@@ -258,7 +258,6 @@ static void printBattleList(uv_work_t *req){
   moduleAddr = 0;
   //get pointer to module adress and also prints module name
   moduleAddr = dwGetModuleBaseAddress(pid, "pxgclient_dx9.exe");
-  //moduleAddr = dwGetModuleBaseAddress(pid, "MineSweeper.exe"); //#mine
 
   printf("address of module: 0x%X\n", (DWORD)moduleAddr);
 
@@ -1173,6 +1172,7 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
 
   Work* work = new Work();
   POINT pkmSlot, reviveSlot;
+  INPUT input;
 
   Local<Object> centerObj = args[0]->ToObject();
   Local<Value> x = centerObj->Get(String::NewFromUtf8(isolate, "x"));
@@ -1186,14 +1186,18 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   reviveSlot.x = x->Int32Value();
   reviveSlot.y = y->Int32Value();
 
+  ::ZeroMemory(&input, sizeof(INPUT));
+
   //select and click revive in revive slot
-  SetCursorPos(reviveSlot.x, reviveSlot.y);
+  input.type = INPUT_MOUSE;
+  input.mi.dx = reviveSlot.x*65535/SCREEN_X;
+  input.mi.dy = reviveSlot.y*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+  //SetCursorPos(reviveSlot.x, reviveSlot.y);
 
   Sleep(50);
-
-  INPUT input;
-
-  ::ZeroMemory(&input, sizeof(INPUT));
 
   input.type      = INPUT_MOUSE;
   input.mi.time = 0;
@@ -1207,7 +1211,7 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
   SendInput(1,&input,sizeof(INPUT));
 
-  Sleep(50);
+  Sleep(40);
 
   //point to pkmslot and use selected revive
   //sendinput with mousemovement is smoothly. it simulated mouse movements instead of flickering from a position to another
@@ -1219,7 +1223,7 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   SendInput(1, &input, sizeof(INPUT));
   //SetCursorPos(pkmSlot.x, pkmSlot.y);
 
-  Sleep(50);
+  Sleep(40);
 
   input.type      = INPUT_MOUSE;
   input.mi.time = 0;
@@ -1233,18 +1237,12 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   input.mi.dwFlags  = MOUSEEVENTF_LEFTUP;
   SendInput(1,&input,sizeof(INPUT));
 
-  Sleep(50);
+  Sleep(40);
 
   //summon pokemon
-  input.type = INPUT_MOUSE;
-  input.mi.dx = pkmSlot.x*65535/SCREEN_X;
-  input.mi.dy = pkmSlot.y*65535/SCREEN_Y;
-  input.mi.time = 0;
-  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
-  SendInput(1, &input, sizeof(INPUT));
-  //SetCursorPos(pkmSlot.x, pkmSlot.y);
+  SetCursorPos(pkmSlot.x, pkmSlot.y);
 
-  Sleep(110);
+  Sleep(125);
 
   input.type      = INPUT_MOUSE;
   input.mi.time = 0;
@@ -1317,6 +1315,61 @@ void registerHkRevivePkmAsync(const FunctionCallbackInfo<Value>& args){
   args.GetReturnValue().Set(Undefined(isolate));
 }
 
+
+
+static void getPlayerPos(uv_work_t *req){
+  WorkPkm *work = static_cast<WorkPkm*>(req->data);
+
+  HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+
+  ReadProcessMemory(handle, (LPDWORD)(moduleAddr+OFFSET_PLAYER_POSX), &work->coords[0].x, 4, NULL);
+  ReadProcessMemory(handle, (LPDWORD)(moduleAddr+OFFSET_PLAYER_POSY), &work->coords[0].y, 4, NULL);
+  ReadProcessMemory(handle, (LPDWORD)(moduleAddr+OFFSET_PLAYER_POSZ), &work->coords[0].z, 1, NULL);
+  printf("player position: %d, %d, %d\n", work->coords[0].x, work->coords[0].y, work->coords[0].z);
+
+  CloseHandle(handle);
+}
+static void getPlayerPosComplete(uv_work_t *req, int status){
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+
+  WorkPkm *work = static_cast<WorkPkm*>(req->data);
+  int x, y, z;
+
+  Local<Object> obj = Object::New(isolate);
+  x = work->coords[0].x;
+  y = work->coords[0].y;
+  z = work->coords[0].z;
+
+  obj->Set(String::NewFromUtf8(isolate, "posx"), Number::New(isolate, x));
+  obj->Set(String::NewFromUtf8(isolate, "posy"), Number::New(isolate, y));
+  obj->Set(String::NewFromUtf8(isolate, "posz"), Number::New(isolate, z));
+
+  //prepare error vars
+  Handle<Value> argv[] = {obj};
+  //execute the callback
+  printf("here");
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
+  //Free up the persistent function callback
+  work->callback.Reset();
+  delete work;
+}
+void getPlayerPosAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  WorkPkm* work = new WorkPkm();
+  work->request.data = work;
+
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[0]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  uv_queue_work(uv_default_loop(), &work->request, getPlayerPos, getPlayerPosComplete);
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
 void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "setScreenConfig", setScreenConfigSync);
   NODE_SET_METHOD(exports, "getBattleList", printBattleListAsync);
@@ -1329,6 +1382,7 @@ void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "isPlayerPkmSummoned", isPlayerPkmSummonedSync);
   NODE_SET_METHOD(exports, "revivePkm", revivePkmSync);
   NODE_SET_METHOD(exports, "registerHkRevivePkm", registerHkRevivePkmAsync);
+  NODE_SET_METHOD(exports, "getPlayerPos", getPlayerPosAsync);
 }
 
 NODE_MODULE(battlelist, init)
