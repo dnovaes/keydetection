@@ -13,14 +13,14 @@ function createWindow () {
 
   // and load the index.html of the app.
   win.loadURL(url.format({
-    pathname: path.join(__dirname, 'login.html'),
+    pathname: path.join(__dirname, 'view/login.html'),
     protocol: 'file:',
     slashes: true
   }))
   win.show();
 
   // Open the DevTools.
-  //win.webContents.openDevTools()
+  win.webContents.openDevTools()
 
   // Emitted when the window is closed.
   win.on('closed', () => {
@@ -29,6 +29,7 @@ function createWindow () {
     // when you should delete the corresponding element.
     win = null
   })
+
 }
 
 // This method will be called when Electron has finished
@@ -40,6 +41,13 @@ app.on('ready', function(err,res){
 });
 
 //console.log(process.version);
+
+/*app.on('before-quit', (e) => {
+  console.log("this is a test");
+});*/
+
+//app.on('activate-with-no-open-windows', () => { win.show();});
+
 
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {
@@ -57,8 +65,3 @@ app.on('activate', () => {
     createWindow()
   }
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here
-
-//var small_mod = require("small_modules/cfunc.js");
