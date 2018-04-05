@@ -7,7 +7,7 @@ Virtual Assistant Application for a specific game (Tibia Platform) for Learning 
 
 App Requisites:
 - Windows ONLY
-- Cliente Dx9 version
+- Client in Dx9 version
 
 # Installation
 
