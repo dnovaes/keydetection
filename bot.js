@@ -218,9 +218,10 @@ btCheckpoint = document.querySelector("#checkpoint");
 btCheckpoint.addEventListener("click", function(){
   let newCommand = document.createElement("li");
   newCommand.classList.add("sel-el");
+  newCommand.dataset.cmdType = "check";
   newCommand.addEventListener("click", removeCommandEl);
   bl.getPlayerPos(function(res){
-    newCommand.innerHTML = `<div class="sel-text">${res.posx}, ${res.posy}, ${res.posz}</div><div class="remove-el"></div>`;
+    newCommand.innerHTML = `<div class="sel-text">${res.posx},${res.posy},${res.posz}</div><div class="remove-el"></div>`;
     listCommands.appendChild(newCommand);
   });
 });
