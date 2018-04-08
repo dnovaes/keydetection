@@ -438,3 +438,74 @@ li:last-child {
   font-weight: normal;
   text-decoration: inherit;
 }
+
+.manage-options{
+  -webkit-app-region: no-drag;
+  width: 95%;
+  height: 30px;
+  padding-top: 5px;}
+  .manage-options .el{
+    width: 50px;
+    height 20px;
+    float: left;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid white;
+    margin-right: 5px;}
+  .manage-options .el:hover{
+    font-weight:bold;}
+
+.lock-screen{
+  -webkit-app-region: no-drag;
+  background-color: black;
+  opacity: 0.9;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top:0;
+  left: 0;
+}
+
+.prompt{
+  -webkit-app-region: no-drag;
+  background: linear-gradient(#774247, red);
+  border-radius: 10px;
+  position: absolute;
+  top: 38%;
+  left: 23%;
+  background-color: white;
+  z-index: 999;
+  width: 50%;
+  height: 68px;
+  padding: 10px;}
+  .prompt input{
+    width: 180px;
+    margin: 0 1% 0 3%;
+    border-radius: 10px;
+    float: left;
+    padding: 5px;}
+  .prompt .text{
+    font-family: Comic Sans MS;
+    color: white;
+    margin: 2px 3%;
+    font-size: 13px;
+    padding: 5px;}
+  .prompt input:focus{
+    border: 2px solid #f7e53f;
+    outline: 0;}
+
+.prompt .btConfirm{
+  -webkit-app-region: no-drag;
+  width: 25px;
+  height: 30px;
+  float: left;
+  font-family: pokemonh;
+  color: white;
+  padding: 5px;
+  margin-top: -17px;
+  cursor: pointer;}
+  .prompt .btConfirm:hover{
+    cursor: pointer;
+    color: #f7e53f;
+  }
+

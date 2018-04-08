@@ -71,7 +71,7 @@
         <select name="profile" id="profile">
           <option value="prof1">bush</option>
           <option value="prof2">wood</option>
-          <option value="prof3" selected>machamp hunt</option>
+          <option value="prof3">machamp hunt</option>
         </select>
         <ul class="list-commands">
           <li class="sel-el">
@@ -95,12 +95,14 @@
             <div class="remove-el"></div>
           </li>
         </ul>
+        <div class="manage-options">
+          <div id="new" class="el">New</div>
+          <div id="save" class="el">Save</div>
+        </div>
       </div>
 
       <div id="container-functions">
-
         <div class="container-title"> functions</div>
-
         <div class="features">
           <div id="checkpoint" class="feature-el"></div>
           <div id="click" class="feature-el"></div>
@@ -110,22 +112,26 @@
           <div id="battle" class="feature-el"></div>
           <div id="timer" class="feature-el"></div>
         </div>
-
       </div>
 
-      <div id="container-loot">
-      </div>
+      <div id="container-loot"></div>
 
       <div id="footer">
         <div class="menu-icon" id="btVoltar"></div>
       </div>
+
     </div>
   </body>
 
   <script type="text/javascript" src="../bot.js"></script>
   <script type="text/javascript">
     console.log(process.versions);
-    //const {remote, shell} = require('electron');
+
+    /* Flags */
+
+    lockFlag = 0;
+
+    /* Elements */
 
     divCaveBot = document.querySelector("#caveBot");
     divCaveIcon = document.querySelector("#caveBot span");
@@ -144,6 +150,24 @@
       el.parentElement.removeChild(el);
     }
 
+    var addLockScreen = () => {
+      lockFlag=1;
+      let opacityDiv = document.createElement("div");
+      opacityDiv.classList.add("lock-screen");
+      document.body.appendChild(opacityDiv);
+      opacityDiv.addEventListener("click", function(){
+        removeLockScreen();
+      });
+    }
+
+    var removeLockScreen = () => {
+      let opacityDiv = document.querySelector(".lock-screen");
+      document.body.removeChild(opacityDiv);
+      let divPrompt = document.querySelector(".prompt");
+      document.body.removeChild(divPrompt);
+      lockFlag = 0;
+    }
+
     /* Events */
     divCaveBot.addEventListener("mouseover", function(){
       divCaveIcon.style.backgroundImage = "url('../img/red_champion.gif')";
@@ -154,7 +178,6 @@
     });
 
     divCaveBot.addEventListener("click", function(){
-      //remote.getCurrentWindow().loadURL(`file://${__dirname}/cavebot.html`);
       divCaveScreen.style.display = "block";
       divMainScreen.style.display = "none";
     });
@@ -170,6 +193,49 @@
         removeCommandEl(e);
       });
     }
+
+    btNew = document.getElementById("new");
+    selProfile = document.getElementById("profile");
+    listCommands = document.querySelector(".list-commands");
+    btNew.addEventListener("click", function(){
+      if(!lockFlag){
+        addLockScreen();
+        let divPrompt = document.createElement("div");
+        divPrompt.classList.add("prompt");
+        divPrompt.classList.add("lock-el");
+          divPrompt.innerHTML = `<div class="text">Type the name of the new PROFILE</div><input name="prompt" id="input-prompt"/><div class="btConfirm">Ok</div>`;
+        document.body.appendChild(divPrompt);
+        document.querySelector("#input-prompt").focus();
+
+        let btConfirmPrompt = document.querySelector(".btConfirm");
+        btConfirmPrompt.addEventListener("click", function(){
+          let input = document.querySelector(".prompt input");
+          if(input.value){
+            let option = document.createElement("option");
+            option.value = input.value;
+            option.text = input.value;
+            selProfile.appendChild(option);
+            selProfile.selectedIndex = selProfile.length-1;
+            let listLength = listCommands.children.length;
+            for(var i=0; i<listLength; i++){
+              listCommands.removeChild(listCommands.children[0]);
+            }
+            removeLockScreen();
+          }
+        });
+
+        let res = null;
+        if (res){
+        }
+      }
+    });
+
+    btSave = document.getElementById("save");
+    btSave.addEventListener("click", function(){
+      let iSelected = selProfile.options.selectedIndex;
+      console.log(selProfile.options[iSelected].text);
+      console.log(listCommands.children[0].dataset.cmdType);
+    });
 
   </script>
 </html>
