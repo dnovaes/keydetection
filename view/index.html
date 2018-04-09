@@ -68,33 +68,8 @@
           <div class="icon-el">+</div>
           <div class="icon-el">-</div>
         </div>
-        <select name="profile" id="profile">
-          <option value="prof1">bush</option>
-          <option value="prof2">wood</option>
-          <option value="prof3">machamp hunt</option>
-        </select>
-        <ul class="list-commands">
-          <li class="sel-el">
-            <div class="sel-text">Zurich</div>
-            <div class="remove-el"></div>
-          </li>
-          <li class="sel-el">
-            <div class="sel-text">Geneva</div>
-            <div class="remove-el"></div>
-          </li>
-          <li class="sel-el">
-            <div class="sel-text">Winterthur</div>
-            <div class="remove-el"></div>
-          </li>
-          <li class="sel-el">
-            <div class="sel-text">Lausanne</div>
-            <div class="remove-el"></div>
-          </li>
-          <li class="sel-el">
-            <div class="sel-text">Lucerne</div>
-            <div class="remove-el"></div>
-          </li>
-        </ul>
+        <select name="profile" id="profile"></select>
+        <ul class="list-commands"></ul>
         <div class="manage-options">
           <div id="new" class="el">New</div>
           <div id="save" class="el">Save</div>
@@ -126,6 +101,7 @@
   <script type="text/javascript" src="../bot.js"></script>
   <script type="text/javascript">
     console.log(process.versions);
+    const fs = require('fs');
 
     /* Flags */
 
@@ -140,9 +116,11 @@
     divMainScreen = document.querySelector("#main-screen");
 
     listCommands = document.querySelector(".list-commands");
+    selProfile = document.getElementById("profile");
 
     /* Buttons */
     btVoltar = document.querySelector("#btVoltar");
+    btNew = document.getElementById("new");
 
     /* Functions */
     var removeCommandEl = (e) => {
@@ -168,6 +146,65 @@
       lockFlag = 0;
     }
 
+    var loadProfiles = (dirPath) => {
+      fs.readdir( dirPath, function(err, files){
+        if(err){
+          console.error("Could not list the directory.", err);
+          process.exit(1);
+        }
+
+        if(selProfile.children.length > 0){
+          clearProfileList();
+        }
+
+        files.forEach( function( filename, index){
+          filename = filename.split(".")[0];
+          //console.log(`${filename}, ${index}`);
+          let option = document.createElement("option");
+          option.value = index;
+          option.text = filename;
+          selProfile.appendChild(option);
+        });
+        //load commands from the first selected
+        let iSelected = selProfile.options.selectedIndex;
+        let fileName = selProfile.options[iSelected].text;
+        loadCommands(fileName);
+      });
+    }
+
+    var clearProfileList = () => {
+      let length = selProfile.children.length;
+      for(var i=0; i<length; i++){
+        selProfile.removeChild(selProfile.children[0]);
+      }
+    }
+
+    var clearListCommands = () => {
+      let listLength = listCommands.children.length;
+      for(var i=0; i<listLength; i++){
+        listCommands.removeChild(listCommands.children[0]);
+      }
+    }
+
+    var loadCommands = (fileName) => {
+      fs.readFile(`./configuration/profiles/${fileName}.json`, "utf-8", (err, data) => {
+        if (err) throw err;
+        let obj = JSON.parse(data);
+        //clear list before loading commands
+        clearListCommands();
+
+        //add commands from the file to the list
+        for(var i=0; i<obj.content.length; i++){
+          let newCommand = document.createElement("li");
+          newCommand.classList.add("sel-el");
+          newCommand.dataset.cmdType = obj.content[i].cmdType;
+          newCommand.addEventListener("click", removeCommandEl);
+          newCommand.innerHTML = `<div class="sel-text">${obj.content[i].pos[0]},${obj.content[i].pos[1]},${obj.content[i].pos[2]}</div><div class="remove-el"></div>`;
+          listCommands.appendChild(newCommand);
+        }
+      });
+    }
+
     /* Events */
     divCaveBot.addEventListener("mouseover", function(){
       divCaveIcon.style.backgroundImage = "url('../img/red_champion.gif')";
@@ -180,6 +217,7 @@
     divCaveBot.addEventListener("click", function(){
       divCaveScreen.style.display = "block";
       divMainScreen.style.display = "none";
+      loadProfiles("./configuration/profiles");
     });
 
     btVoltar.addEventListener("click", function(){
@@ -194,16 +232,13 @@
       });
     }
 
-    btNew = document.getElementById("new");
-    selProfile = document.getElementById("profile");
-    listCommands = document.querySelector(".list-commands");
     btNew.addEventListener("click", function(){
       if(!lockFlag){
         addLockScreen();
         let divPrompt = document.createElement("div");
         divPrompt.classList.add("prompt");
         divPrompt.classList.add("lock-el");
-          divPrompt.innerHTML = `<div class="text">Type the name of the new PROFILE</div><input name="prompt" id="input-prompt"/><div class="btConfirm">Ok</div>`;
+        divPrompt.innerHTML = `<div class="text">Type the name of the new PROFILE</div><input name="prompt" id="input-prompt"/><div class="btConfirm">Ok</div>`;
         document.body.appendChild(divPrompt);
         document.querySelector("#input-prompt").focus();
 
@@ -216,25 +251,39 @@
             option.text = input.value;
             selProfile.appendChild(option);
             selProfile.selectedIndex = selProfile.length-1;
-            let listLength = listCommands.children.length;
-            for(var i=0; i<listLength; i++){
-              listCommands.removeChild(listCommands.children[0]);
-            }
+            clearListCommands();
             removeLockScreen();
           }
         });
-
-        let res = null;
-        if (res){
-        }
       }
+    });
+
+    selProfile.addEventListener("change", function(e){
+      let iSelected = selProfile.options.selectedIndex;
+      let fileName = selProfile.options[iSelected].text;
+      loadCommands(fileName);
     });
 
     btSave = document.getElementById("save");
     btSave.addEventListener("click", function(){
       let iSelected = selProfile.options.selectedIndex;
-      console.log(selProfile.options[iSelected].text);
-      console.log(listCommands.children[0].dataset.cmdType);
+      let fileName = selProfile.options[iSelected].text;
+
+      console.log(fileName);
+
+      let obj = {};
+      obj.fileName = fileName;
+      obj.content = [];
+      for(var i=0; i<listCommands.children.length; i++){
+        obj.content[i] = {};
+        obj.content[i].cmdType = listCommands.children[i].dataset.cmdType;
+        obj.content[i].pos = listCommands.children[i].children[0].textContent.split(",");
+      }
+      //console.log(JSON.stringify(obj));
+      fs.writeFile(`./configuration/profiles/${obj.fileName}.json`, JSON.stringify(obj), (err) => {
+        if (err) throw err;
+        console.log('The file has been saved!');
+      });
     });
 
   </script>
