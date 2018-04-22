@@ -3,7 +3,6 @@ const bl = require("../build/Release/battlelist");
 const sharexNode = require("../build/Release/sharex");
 const keyboard = require("../build/Release/keyboard");
 const focuscc = require("../build/Release/focus");
-const addon = require("../build/Release/addon");
 const mouse = require("../build/Release/mouse");
 const AsyncLock = require('async-lock');
 
@@ -17,6 +16,7 @@ var locktarget = new AsyncLock();
 var moduleAddr = 0;
 var pid = 0;
 var fRevive = 0;
+var fPause = false;
 
 var center = {
   "x": 0,
@@ -48,6 +48,7 @@ var printlog = function(arg){
   console.log(arg);
 }
 
+//first function to run. It gets moduleaddress and pid of the program too
 bl.getBattleList(function(res){
   let i;
 
@@ -80,7 +81,6 @@ bl.getBattleList(function(res){
   }
 });
 
-updateScreenCoords({x: 0, y: 0, w: 0, h: 0});
 /*
 mouse.getCursorPosbyClick(function(res){
     console.log(`res.x: ${res.x} res.y: ${res.y}`);
@@ -108,6 +108,7 @@ divScreenCoords.addEventListener("click", function(){
 
 //sqm's in the screen: 15x11
 function updateScreenCoords(res){
+  console.log(res);
 
   //res = { x: 970, y: 136, w: 442, h: 324 }
 
@@ -137,6 +138,8 @@ function updateScreenCoords(res){
   center.x = res.x + res.w/2;
   center.y = res.y + res.h/2;
 
+  console.log("Center: "+center.x+"x"+center.y);
+
   console.log("Screen Coords captured");
 
   bl.setScreenConfig(center, sqm, function(){
@@ -145,15 +148,20 @@ function updateScreenCoords(res){
 
 // ============  Global Bot Hotkeys =====================
 
+bl.registerHKF10Async(function(res){
+  fPause = !fPause;
+  console.log(`F10 key detected!! Status: ${fPause}`);
+});
+/*
 addon.registerHKF10Async(function(res){
   console.log("F10 key detected!!");
-
   if(center.x != 0 & center.y != 0){
     prepareForFishing();
   }else{
     alert(`Configure a tela do seu pokemon pelo bot antes de iniciar`);
   }
 });
+*/
 
 bl.registerHkRevivePkm(function(res){
   if(fRevive === 1){
