@@ -4,11 +4,11 @@
   "description": "A companion for your PXG",
   "main": "index.js",
   "dependencies": {
-    "async-lock": "^1.0.0",
-    "electron": "^1.8.4"
+    "async-lock": "^1.0.0"
   },
   "devDependencies": {
-    "electron-rebuild": "^1.7.3"
+    "electron-rebuild": "^1.7.3",
+    "electron": "^1.8.4"
   },
   "scripts": {
     "start": "electron .",
