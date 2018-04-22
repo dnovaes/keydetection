@@ -1,9 +1,10 @@
 // hello.cc
 #include <node.h>
 #include <uv.h>
-#include <windows.h>
+//#include <windows.h>
 #include <tchar.h>
-#include <iostream>
+//#include <iostream>
+#include <signal.h>
 
 namespace demo {
 
@@ -46,44 +47,6 @@ struct sygPos{
 Work *workGPos;
 sygPos objG, *pobjG;
 
-void registerHotKeyF10(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = args.GetIsolate();
-  //args.GetReturnValue().Set(String::NewFromUtf8(isolate, "world"));
-
- // Check the number of arguments passed.
-
-  /*
-  if (args.Length() < 1) {
-    // Throw an Error that is passed back to JavaScript
-    isolate->ThrowException(Exception::TypeError(
-        String::NewFromUtf8(isolate, "Wrong number of arguments")));
-    return;
-  }
-  */
-
-  //VK_F10 == 0x79 = F10 key
-  if(RegisterHotKey(NULL, 1, NULL, 0x79)){
-//    _tprintf(_T("Hotkey 'F10' registered!\n"));
-
-//    char val[25] = "This is a test with cout";
-//    std::cout << val << std::endl;
-
-    MSG msg = {0};
-
-    while (GetMessage(&msg, NULL, 0, 0) != 0){
-      if(msg.message == WM_HOTKEY){
-
-//        _tprintf(_T("WM_HOTKEY received\n"));
-
-        UnregisterHotKey(NULL, 1);
-        //return text message
-        args.GetReturnValue().Set(Boolean::New(isolate, "v8::True()"));
-        break;
-      }
-    }
-  }
-}
-
 //register hotkey f10 while worker thread is running asynchronically
 static void registerHKF10(uv_work_t *req){
 
@@ -92,9 +55,10 @@ static void registerHKF10(uv_work_t *req){
   if(RegisterHotKey(NULL, 1, NULL, 0x79)){
     MSG msg = {0};
 
-    while (GetMessage(&msg, NULL, 0, 0) != 0){
-      if(msg.message == WM_HOTKEY){
+    printf("Running as PID=%d\n",getpid());
 
+    while (GetMessage(&msg, NULL, 0, 0) != 0 ){
+      if(msg.message == WM_HOTKEY){
         //UnregisterHotKey(NULL, 1);
 
         //Communication between threads(uv_work_t and uv_async_t);
