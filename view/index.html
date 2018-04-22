@@ -18,12 +18,12 @@
 
         <div class="menu-item-small" id="fishing">
           <span class="icon-button"></span>
-          <div id="text">Fishing</div>
+          <div class="text">Fishing</div>
         </div>
 
         <div class="menu-item-small" id="revive">
           <span class="icon-button"></span>
-          <div id="text">Auto-Revive</div>
+          <div class="text">Auto-Revive</div>
         </div>
 
         <div class="clear-float"></div>
@@ -52,7 +52,7 @@
 
         <div class="menu-item" id="caveBot">
           <span class="icon-button"></span>
-          <div id="text">Cave-bot</div>
+          <div class="text">Cave-bot</div>
         </div>
 
         <div id="console-title">Console:<br></div>
@@ -83,9 +83,12 @@
           <div id="click" class="feature-el"></div>
           <div id="keyboard" class="feature-el"></div>
           <div class="clear-float"></div>
-          <div id="move" class="feature-el"></div>
           <div id="battle" class="feature-el"></div>
-          <div id="timer" class="feature-el"></div>
+          <div id="sleep" class="feature-el"></div>
+        </div>
+        <div id="btStart">
+          <span class="icon-button"></span>
+          <div class="text">Start</div>
         </div>
       </div>
 
@@ -106,6 +109,7 @@
     /* Flags */
 
     lockFlag = 0;
+    caveFlag = 0;
 
     /* Elements */
 
@@ -121,6 +125,8 @@
     /* Buttons */
     btVoltar = document.querySelector("#btVoltar");
     btNew = document.getElementById("new");
+    btSleep = document.getElementById("sleep");
+    btStart = document.getElementById("btStart");
 
     /* Functions */
     var removeCommandEl = (e) => {
@@ -199,10 +205,43 @@
           newCommand.classList.add("sel-el");
           newCommand.dataset.cmdType = obj.content[i].cmdType;
           newCommand.addEventListener("click", removeCommandEl);
-          newCommand.innerHTML = `<div class="sel-text">${obj.content[i].pos[0]},${obj.content[i].pos[1]},${obj.content[i].pos[2]}</div><div class="remove-el"></div>`;
+          switch(newCommand.dataset.cmdType){
+            case 'check':
+              newCommand.innerHTML = `<div class="sel-text">${obj.content[i].pos[0]},${obj.content[i].pos[1]},${obj.content[i].pos[2]}</div><div class="remove-el"></div>`;
+              break;
+            case 'sleep':
+              newCommand.dataset.value = obj.content[i].value;
+              newCommand.innerHTML = `<div class="sel-text">Sleep for ${obj.content[i].value/1000}s</div><div class="remove-el"></div>`;
+              break;
+          }
           listCommands.appendChild(newCommand);
         }
       });
+    }
+
+    var loadCommandsToObj = () => {
+      let obj = {};
+      let iSelected = selProfile.options.selectedIndex;
+      let fileName = selProfile.options[iSelected].text;
+
+      obj.fileName = fileName;
+      obj.content = [];
+      for(var i=0; i<listCommands.children.length; i++){
+        obj.content[i] = {};
+        obj.content[i].cmdType = listCommands.children[i].dataset.cmdType;
+        switch(obj.content[i].cmdType){
+          case 'check':
+            obj.content[i].pos = listCommands.children[i].children[0].textContent.split(",");
+            break;
+          case 'sleep':
+            obj.content[i].value = listCommands.children[i].dataset.value;
+            break;
+          default:
+            console.log("default choosen");
+            break;
+        }
+      }
+      return obj;
     }
 
     /* Events */
@@ -266,24 +305,80 @@
 
     btSave = document.getElementById("save");
     btSave.addEventListener("click", function(){
-      let iSelected = selProfile.options.selectedIndex;
-      let fileName = selProfile.options[iSelected].text;
-
-      console.log(fileName);
 
       let obj = {};
-      obj.fileName = fileName;
-      obj.content = [];
-      for(var i=0; i<listCommands.children.length; i++){
-        obj.content[i] = {};
-        obj.content[i].cmdType = listCommands.children[i].dataset.cmdType;
-        obj.content[i].pos = listCommands.children[i].children[0].textContent.split(",");
-      }
+      obj = loadCommandsToObj();
       //console.log(JSON.stringify(obj));
       fs.writeFile(`./configuration/profiles/${obj.fileName}.json`, JSON.stringify(obj), (err) => {
         if (err) throw err;
         console.log('The file has been saved!');
       });
+    });
+
+    btStartText = document.querySelector("#btStart .text");
+    btStart.addEventListener("click", function(){
+      if(!caveFlag){
+        //start caveBot
+
+        //change button style
+        btStart.style.background = 'linear-gradient(#774247, #f7e53f)';
+        btStartText.textContent = "Stop";
+        caveFlag=1;
+
+        //load file
+        let obj = loadCommandsToObj();
+        //console.log(JSON.stringify(obj));
+
+        //focus window and run the cave with the loaded file
+        focuscc.focusWindow(function(res){
+          bl.runProfile(obj, function(res){
+            console.log("Profile finished.\n");
+          });
+        });
+
+      }else{
+        //stop caveBot
+        console.log("trying to stop profile");
+        bl.stopProfileSync();
+        console.log("command stopProfile executed.\n");
+        btStart.style.background = 'linear-gradient(red, #774247)';
+        btStartText.textContent = "Start";
+        caveFlag=0;
+      }
+    });
+
+    btSleep.addEventListener("click", function(){
+      if(!lockFlag){
+        addLockScreen();
+        let divPrompt = document.createElement("div");
+        divPrompt.classList.add("prompt");
+        divPrompt.classList.add("lock-el");
+        divPrompt.innerHTML = `
+          <div class="text">Wait for how much seconds?</div>
+          <input name="prompt" type="number"/>
+          <div class="btConfirm">Ok</div>
+        `;
+        document.body.appendChild(divPrompt);
+        document.querySelector(".prompt input").focus();
+
+        let btConfirmPrompt = document.querySelector(".btConfirm");
+        btConfirmPrompt.addEventListener("click", function(){
+          let input = document.querySelector(".prompt input");
+          if(input.value){
+            input.value*=1000;
+            //console.log(`value in miliseconds: ${input.value}`);
+
+            let newCommand = document.createElement("li");
+            newCommand.classList.add("sel-el");
+            newCommand.dataset.cmdType = "sleep";
+            newCommand.dataset.value = input.value;
+            newCommand.addEventListener("click", removeCommandEl);
+            newCommand.innerHTML = `<div class="sel-text">Sleep for ${input.value/1000}s</div><div class="remove-el"></div>`;
+            listCommands.appendChild(newCommand);
+            removeLockScreen();
+          }
+        });
+      }
     });
 
   </script>

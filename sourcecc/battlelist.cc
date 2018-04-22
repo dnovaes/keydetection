@@ -88,10 +88,33 @@ struct WorkFish{
   byte fishStatus;
 };
 
+typedef struct commandList{
+  char* cmdType;
+  int pos[3];
+  int value;
+}CommandList;
+
+typedef struct contentProfile{
+  char *fileName;
+  CommandList *commands;
+  int sizeCommandList;
+}ContentProfile;
+
+struct WorkProfile{
+  //cannot be const, has to be editable
+  ContentProfile *profile;
+  uv_work_t request;
+  uv_async_t async;
+  //stores the javascript callback function, persistent means: store in the heap
+  Persistent<Function> callback;
+};
+
 //global var
 char mutex = 1; //1 = continue
 uv_rwlock_t numlock;
 BOOL fDebugWhileEvent = FALSE;
+BOOL fPause = FALSE;
+BOOL fCaveBot = FALSE;
 DWORD pid;
 DWORD dwThreadID;
 DWORD_PTR moduleAddr;
@@ -104,6 +127,12 @@ int m3 = 0;
 int m4 = 0;
 int SCREEN_X = 0;
 int SCREEN_Y = 0;
+
+//C function declaration
+Coords getPlayerPosC();
+DWORD GetProcessThreadID(DWORD pID);
+DWORD_PTR dwGetModuleBaseAddress(DWORD pid, TCHAR *szModuleName);
+void printThreads(DWORD pid);
 
 //const
 
@@ -148,9 +177,6 @@ const DWORD_PTR OFFSET_MOVESET_P3 = 0x0;
 const DWORD_PTR OFFSET_MOVESET_X  = 0x0;
 const DWORD_PTR OFFSET_MOVESET_Y  = 0x0;
 
-DWORD GetProcessThreadID(DWORD pID);
-void printThreads(DWORD pid);
-
 DWORD_PTR dwGetModuleBaseAddress(DWORD pid, TCHAR *szModuleName)
 {
 
@@ -164,8 +190,7 @@ DWORD_PTR dwGetModuleBaseAddress(DWORD pid, TCHAR *szModuleName)
     {
         do
         {
-            //printTCHAR(ModuleEntry32.szModule);
-            printf(" Module Name: %s\n", ModuleEntry32.szModule);
+            //printf(" Module Name: %s\n", ModuleEntry32.szModule);
             if (_tcsicmp(ModuleEntry32.szModule, szModuleName) == 0)
             {
                 dwModuleBaseAddress = (DWORD_PTR)ModuleEntry32.modBaseAddr;
@@ -220,6 +245,31 @@ void signal_callback_handler(int signum)
   exit(signum);
 }
 
+DWORD getProcessId(char *clientName){
+  // Create toolhelp snapshot.
+  HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  PROCESSENTRY32 process;
+  ZeroMemory(&process, sizeof(process));
+  process.dwSize = sizeof(process);
+  DWORD pid;
+
+  // Walkthrough all processes.
+  if (Process32First(snapshot, &process)){
+      do{
+          // Compare process.szExeFile based on format of name, i.e., trim file path
+          // trim .exe if necessary, etc.
+          std::string processName = std::string(process.szExeFile);
+          if (processName == "pxgclient_dx9.exe"){
+             pid = process.th32ProcessID;
+             //printf("Process %d (0x%04X) \n", pid, pid);
+             break;
+          }
+      } while (Process32Next(snapshot, &process));
+  }
+  CloseHandle(snapshot);
+  return pid;
+}
+
 //main function
 static void printBattleList(uv_work_t *req){
 
@@ -228,27 +278,7 @@ static void printBattleList(uv_work_t *req){
 
 
   pid = 0;
-  // Create toolhelp snapshot.
-  HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-  PROCESSENTRY32 process;
-  ZeroMemory(&process, sizeof(process));
-  process.dwSize = sizeof(process);
-
-  // Walkthrough all processes.
-  if (Process32First(snapshot, &process)){
-      do{
-          // Compare process.szExeFile based on format of name, i.e., trim file path
-          // trim .exe if necessary, etc.
-          std::string processName = std::string(process.szExeFile);
-          //if (processName == "MineSweeper.exe"){ //#mine
-          if (processName == "pxgclient_dx9.exe"){
-             pid = process.th32ProcessID;
-             printf("Process %d (0x%04X) \n", pid, pid);
-             break;
-          }
-      } while (Process32Next(snapshot, &process));
-  }
-  CloseHandle(snapshot);
+  pid = getProcessId("pxgclient_dx9.exe");
 
   //When program gets SIGINT, it will trigger the function signal_callback_handler to execute
   // SIGINT = CTRL+C
@@ -662,6 +692,58 @@ void setScreenConfigSync(const FunctionCallbackInfo<Value>& args){
   Local<Number> val = Number::New(isolate, 1);
   args.GetReturnValue().Set(val);
 }
+
+//register hotkey f10 while worker thread is running asynchronically
+static void registerHKF10(uv_work_t *req){
+
+  Work *work = static_cast<Work*>(req->data);
+
+  if(RegisterHotKey(NULL, 1, NULL, 0x79)){
+    MSG msg = {0};
+
+    printf("Running as PID=%d\n",getpid());
+
+    while (GetMessage(&msg, NULL, 0, 0) != 0 ){
+      if(msg.message == WM_HOTKEY){
+        fPause = !fPause;
+        //UnregisterHotKey(NULL, 1);
+
+        //Communication between threads(uv_work_t and uv_async_t);
+        work->async.data = (void*) req;
+        uv_async_send(&work->async);
+      }
+    }
+  }
+}
+void sendSygnalHK(uv_async_t *handle) {
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+
+  uv_work_t *req = ((uv_work_t*) handle->data);
+  Work *work = static_cast<Work*> (req->data);
+
+  Local<Number> val = Number::New(isolate, 1);
+  Handle<Value> argv[] = {val};
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+}
+void registerHKF10Async(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  Work* work = new Work();
+  work->request.data = work;
+
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[0]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  uv_async_init(uv_default_loop(), &work->async, sendSygnalHK);
+  uv_queue_work(uv_default_loop(), &work->request, registerHKF10, NULL);
+
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
 
 static void fish(uv_work_t *req){
   WorkFish *work = static_cast<WorkFish*>(req->data);
@@ -1188,7 +1270,7 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
 
   ::ZeroMemory(&input, sizeof(INPUT));
 
-  //select and click revive in revive slot
+  //move and click revive in revive slot
   input.type = INPUT_MOUSE;
   input.mi.dx = reviveSlot.x*65535/SCREEN_X;
   input.mi.dy = reviveSlot.y*65535/SCREEN_Y;
@@ -1316,15 +1398,76 @@ void registerHkRevivePkmAsync(const FunctionCallbackInfo<Value>& args){
 }
 
 
+Coords getPlayerPosC(){
+  Coords coords;
+  pid = getProcessId("pxgclient_dx9.exe");
+  moduleAddr = dwGetModuleBaseAddress(pid, "pxgclient_dx9.exe");
+
+  HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+
+  ReadProcessMemory(handle, (LPDWORD)(moduleAddr+OFFSET_PLAYER_POSX), &coords.x, 4, NULL);
+  ReadProcessMemory(handle, (LPDWORD)(moduleAddr+OFFSET_PLAYER_POSY), &coords.y, 4, NULL);
+  ReadProcessMemory(handle, (LPDWORD)(moduleAddr+OFFSET_PLAYER_POSZ), &coords.z, 4, NULL);
+  //printf("\n\nplayer position: %d, %d, %d\n", coords.x, coords.y, coords.z);
+
+  CloseHandle(handle);
+  return coords;
+}
+
+void sendClickToGamePos(Coords targetPos, Coords playerPos){
+  //convert GamePos to ScreenPos
+  int sqmDiffX, sqmDiffY; 
+  POINT targetScreenPos;
+  INPUT input;
+
+  sqmDiffX = targetPos.x - playerPos.x;
+  sqmDiffY = targetPos.y - playerPos.y;
+  printf("sqmDiff: %d, %d ", sqmDiffX, sqmDiffY);
+  printf("center: %d, %d ", center.x, center.y);
+
+  targetScreenPos.x = center.x + (sqmDiffX*(sqm.x));
+  targetScreenPos.y = center.y + (sqmDiffY*(sqm.y));
+
+  printf("Sending click to screenPos: %d, %d (CurrentPos: %d, %d), (Going to: %d, %d)\n\n", targetScreenPos.x, targetScreenPos.y, playerPos.x, playerPos.y, targetPos.x, targetPos.y);
+
+  SetCursorPos(targetScreenPos.x, targetScreenPos.y);
+
+  Sleep(50);
+
+  input.type      = INPUT_MOUSE;
+  input.mi.time = 0;
+  input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
+  SendInput(1,&input,sizeof(INPUT));
+
+  Sleep(50);
+
+  input.type      = INPUT_MOUSE;
+  input.mi.time = 0;
+  input.mi.dwFlags  = MOUSEEVENTF_LEFTUP;
+  SendInput(1,&input,sizeof(INPUT));
+
+  Sleep(40);
+}
+
+void pause(){
+  //bot will enter in pause mode if fPause is set to pause
+  while(fPause){
+    printf("Bot Paused.\n");
+    Sleep(3000);
+  }
+}
 
 static void getPlayerPos(uv_work_t *req){
   WorkPkm *work = static_cast<WorkPkm*>(req->data);
 
   HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
 
+  work->coords[0] = getPlayerPosC();
+  /* 
   ReadProcessMemory(handle, (LPDWORD)(moduleAddr+OFFSET_PLAYER_POSX), &work->coords[0].x, 4, NULL);
   ReadProcessMemory(handle, (LPDWORD)(moduleAddr+OFFSET_PLAYER_POSY), &work->coords[0].y, 4, NULL);
-  ReadProcessMemory(handle, (LPDWORD)(moduleAddr+OFFSET_PLAYER_POSZ), &work->coords[0].z, 1, NULL);
+  ReadProcessMemory(handle, (LPDWORD)(moduleAddr+OFFSET_PLAYER_POSZ), &work->coords[0].z, 4, NULL);
+  */
   printf("player position: %d, %d, %d\n", work->coords[0].x, work->coords[0].y, work->coords[0].z);
 
   CloseHandle(handle);
@@ -1348,7 +1491,6 @@ static void getPlayerPosComplete(uv_work_t *req, int status){
   //prepare error vars
   Handle<Value> argv[] = {obj};
   //execute the callback
-  printf("here");
   Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
 
   //Free up the persistent function callback
@@ -1370,8 +1512,204 @@ void getPlayerPosAsync(const FunctionCallbackInfo<Value>& args){
   args.GetReturnValue().Set(Undefined(isolate));
 }
 
+
+
+static void runProfile(uv_work_t *req){
+  WorkProfile *work = static_cast<WorkProfile*>(req->data);
+  /*
+  int i=0;
+  while(i<100){
+    if(fPause){
+      //printf("Bot Paused!!\n");
+    }else{
+      printf("Running Async\n");
+      i++;
+    }
+    Sleep(100);
+  }
+  */
+  ContentProfile *cProfile = work->profile;
+  int contentLength = cProfile->sizeCommandList;
+  Coords playerPos, targetPos;
+  fCaveBot = TRUE; //flag mark that indicates that caveBot is running
+
+  //printf("-> Reading file '%s'.json:\n", cProfile->fileName);
+  //printf("{\n  fileName: '%s',\n  content:[\n", cProfile->fileName);
+  while(fCaveBot){
+    for( int i = 0; i < contentLength; i++ ){
+      if(fPause){
+        pause();
+      }
+      if(!fCaveBot){
+        break;
+      }
+      //printf("    {cmdType: '%s', ", cProfile->commands[i].cmdType);
+      printf("\n\nRunning command %d\n", i);
+
+      if(strcmp(cProfile->commands[i].cmdType, "sleep") == 0){ //Sleep Command
+        //printf("value: '%d'}\n", cProfile->commands[i].value);
+        printf("Sleeping...%ds\n", cProfile->commands[i].value);
+        Sleep(cProfile->commands[i].value);
+
+      }else if(strcmp(cProfile->commands[i].cmdType, "check") == 0){ //Move Command
+        //printf("pos: [ ");
+        playerPos = getPlayerPosC();
+        printf("player position: %d, %d, %d\n", playerPos.x, playerPos.y, playerPos.z);
+        if(
+          (abs(playerPos.x - cProfile->commands[i].pos[0])<8)&&
+          (abs(playerPos.y - cProfile->commands[i].pos[1])<6)&&
+          (abs(playerPos.z - cProfile->commands[i].pos[2])==0)
+        ){
+          printf("coords is close, time to go!\n");
+          targetPos.x = cProfile->commands[i].pos[0];
+          targetPos.y = cProfile->commands[i].pos[1];
+        }else{
+          printf("TargetPos: %d, %d\n", cProfile->commands[i].pos[0], cProfile->commands[i].pos[1]);
+          printf("too far away! [%d] Restarting Route. Pls to first position of the ROUTE\n", i);
+          i=-1;
+          Sleep(5000);
+        }
+        while((fCaveBot)&&
+            (((abs(playerPos.x - targetPos.x))>0)||
+              ((abs(playerPos.y - targetPos.y))>0))
+        ){
+          printf("ok im inside of the loop time to send click to game. ");
+          printf("%d, %d\n", abs(playerPos.x - targetPos.x), abs(playerPos.y - targetPos.y));
+          sendClickToGamePos(targetPos, playerPos);
+          Sleep(2000);
+          playerPos = getPlayerPosC();
+          if(fPause){
+            pause();
+          }
+          if(!fCaveBot){
+            break;
+          }
+        }
+        /* 
+        for(unsigned int j=0; j < 3; j++ ){
+          printf("%d", cProfile->commands[i].pos[j]);
+          if(j<2){
+            printf(",");
+          }
+        }
+        printf(" ]}\n");
+        */
+      }
+    }
+  }
+  //printf("  ]\n}\n");
+  printf("Profile finished Async\n");
+}
+static void runProfileComplete(uv_work_t *req, int status){
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+
+  WorkProfile *work = static_cast<WorkProfile*>(req->data);
+
+
+  //prepare error vars
+  Local<Number> val = Number::New(isolate, 1);
+  Handle<Value> argv[] = {val};
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
+  //Free up the persistent function callback
+  work->callback.Reset();
+  delete work;
+}
+void runProfileAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  WorkProfile* work = new WorkProfile();
+  work->request.data = work;
+
+  //Mapping JavaScript object to C++ class
+  Local<Object> obj = args[0]->ToObject();
+
+  Local<Value> fileNameValue = obj->Get(String::NewFromUtf8(isolate, "fileName"));
+  v8::String::Utf8Value filename_utfValue(fileNameValue);
+
+  Local<Array> contentArray = Local<Array>::Cast(
+      obj->Get(
+        String::NewFromUtf8(isolate, "content")
+      )
+  );
+  int contentLength = contentArray->Length();
+
+  //malloc ContentProfile
+  ContentProfile *cProfile = (ContentProfile*)malloc(sizeof(struct contentProfile));
+  //ContentProfile *cProfile = (ContentProfile*)malloc(contentLength*sizeof(struct commandList)+sizeof(struct contentProfile*));
+  work->profile = cProfile;
+
+  cProfile->fileName = (char*)malloc(filename_utfValue.length()+1);
+  strcpy(cProfile->fileName, std::string(*filename_utfValue, filename_utfValue.length()).c_str());
+
+  cProfile->sizeCommandList = contentLength;
+
+  //malloc CommandList commands*
+  cProfile->commands = (CommandList*)malloc(contentLength*sizeof(struct commandList));
+  
+  Local<Object> arrObj;
+  Local<Value> cmdTypeValue, value;
+  Local<Array> posArray;
+
+  std::string cmdType;
+  for( int i = 0; i < contentLength; i++ ){
+    arrObj = Local<Object>::Cast(contentArray->Get(i));
+    cmdTypeValue = arrObj->Get(String::NewFromUtf8(isolate, "cmdType"));
+    v8::String::Utf8Value cmdType_utfValue(cmdTypeValue);
+    cmdType = std::string(*cmdType_utfValue, cmdType_utfValue.length()).c_str();
+
+    //malloc cmdType char*
+    cProfile->commands[i].cmdType = (char*)malloc(strlen(cmdType.c_str())+1);
+    strcpy(cProfile->commands[i].cmdType, cmdType.c_str());
+
+    if(strcmp(cProfile->commands[i].cmdType, "sleep") == 0){
+      value = arrObj->Get(String::NewFromUtf8(isolate, "value"));
+      cProfile->commands[i].value = value->Int32Value();
+
+    }else if(strcmp(cProfile->commands[i].cmdType, "check") == 0){
+      posArray = Local<Array>::Cast(
+        arrObj->Get(
+          String::NewFromUtf8(isolate, "pos")
+        )
+      );
+
+      for(unsigned int j=0; j < posArray->Length(); j++ ){
+        value = Local<Value>::Cast(posArray->Get(j));
+        cProfile->commands[i].pos[j] = value->Int32Value();
+      }
+    }
+
+  }
+
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[1]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  uv_queue_work(uv_default_loop(), &work->request, runProfile, runProfileComplete);
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
+
+void stopProfileSync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  fCaveBot = FALSE;
+  //remove pause in case of bot paused. Force unpause to finish bot
+  fPause = FALSE;
+  //printf("fCaveBot: %d\n", fCaveBot);
+
+  Local<Number> val = Number::New(isolate, 1);
+  Handle<Value> argv[] = {val};
+
+  args.GetReturnValue().Set(val);
+}
+
 void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "setScreenConfig", setScreenConfigSync);
+  NODE_SET_METHOD(exports, "registerHKF10Async", registerHKF10Async);
   NODE_SET_METHOD(exports, "getBattleList", printBattleListAsync);
   NODE_SET_METHOD(exports, "fish", fishAsync);
   NODE_SET_METHOD(exports, "readBlCounter", readBlCounterAsync);
@@ -1383,6 +1721,8 @@ void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "revivePkm", revivePkmSync);
   NODE_SET_METHOD(exports, "registerHkRevivePkm", registerHkRevivePkmAsync);
   NODE_SET_METHOD(exports, "getPlayerPos", getPlayerPosAsync);
+  NODE_SET_METHOD(exports, "runProfile", runProfileAsync);
+  NODE_SET_METHOD(exports, "stopProfileSync", stopProfileSync);
 }
 
 NODE_MODULE(battlelist, init)
