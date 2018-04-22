@@ -1,10 +1,6 @@
 {
   "targets": [
     {
-      "target_name": "addon",
-      "sources": [ "sourcecc/hello.cc" ]
-    },
-    {
       "target_name": "keyboard",
       "sources": [ "sourcecc/keyboard.cc" ]
     },
