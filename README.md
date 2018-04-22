@@ -91,7 +91,7 @@ monitor button again.
 
 # Packaging and Compiling own version
 
-Install electron-packager. I build my version using NPM 5.4.1 > 5.6.0.
+Install electron-packager. I built my version using NPM 5.4.1/5.6.0.
 ```
 npm install electron-packager -g
 ```
@@ -99,8 +99,11 @@ npm install electron-packager -g
 Go to source project folder and run:
 
 ```
-electron-packager ./ BobitoBot --platform=win32 --arch=x64 --asar=true
-electron-packager ./ BobitoBot --platform=win32 --arch=ia32 --asar=true --prune=true
+if using windows 64bits on host:
+electron-packager ./ BobitoBot --platform=win32 --arch=x64 --asar
+
+if using windows 32bits on host
+electron-packager ./ BobitoBot --platform=win32 --arch=ia32 --asar --prune=true
 ```
 
 ## Resources for Learning Electron
