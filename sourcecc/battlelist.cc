@@ -147,13 +147,14 @@ const DWORD_PTR INSTR_POSADDR               = 0x1461A4;
 const DWORD_PTR OFFSET_PLAYER_POSX          = 0x395840;
 const DWORD_PTR OFFSET_PLAYER_POSY          = 0x395850;
 const DWORD_PTR OFFSET_PLAYER_POSZ          = 0x395854; //1 byte is enough here
-//use creatureAddress as base
+//use creatureAddress Name as base
 const DWORD_PTR OFFSET_PKM_NAME_LENGTH      = 0x24; //byte
 const DWORD_PTR OFFSET_PKM_NAME             = 0x28;
 const DWORD_PTR OFFSET_PKM_POSX             = 0xC;
 const DWORD_PTR OFFSET_PKM_POSY             = 0x10;
 const DWORD_PTR OFFSET_PKM_POSZ             = 0x14;
 const DWORD_PTR OFFSET_PKM_LIFE             = 0x38;
+const DWORD_PTR OFFSET_PKM_LOOKTYPE         = 0x1C;
 //pointer to battlelist counter of active creatures
 const DWORD_PTR BASEADDR_BLACOUNT           = 0x0038E820;
 const DWORD_PTR OFFSET_BLCOUNT_P1           = 0x33C;
@@ -322,25 +323,26 @@ static void printBattleList(uv_work_t *req){
   }
 
   HANDLE handlep = OpenProcess(PROCESS_VM_READ, FALSE, pid);
-  char entityName[16];
+  /*char entityName[16];
   byte entityType, entityNumLetters;
+  byte entityLookType;*/
   byte entityNumberBl, oldEntityNumberBl = 0x0;
 
   DWORD_PTR entityAddr;//a just spawed pokemon, npc or player
-
-  //read pointer
 
   printf("iniciando deteccao de pokemons\n");
   do{
 
     ReadProcessMemory(handlep, (LPDWORD)(BASEADDR_CREATURE_GEN), &entityAddr, 4, NULL);
     entityAddr = entityAddr-0x28;
+    ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x1C), &entityNumberBl, 1, NULL);
+    /*
     ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x24), &entityNumLetters, 1, NULL);
     ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28), &entityName, 16, NULL);
     ReadProcessMemory(handlep, (LPDWORD)(entityAddr), &entityType, 1, NULL);
-    ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x1C), &entityNumberBl, 1, NULL);
-
+    ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28+OFFSET_PKM_LOOKTYPE), &entityLookType, 1, NULL);
     entityName[entityNumLetters] = 0;
+    */
 
     if(entityNumberBl != oldEntityNumberBl){
       //printf("\nentityName: %s %d, Type: %d, creatureCounter: %d, Address: 0x%X \n", entityName, entityNumLetters, entityType, entityNumberBl, entityAddr);
@@ -618,16 +620,19 @@ const DWORD_PTR OFFSET_PKM_LIFE   = 0x38; //byte
     DWORD_PTR entityAddr = work->creatureAddr;
     char entityName[16];
     byte entityType, entityNumberBl;
+    byte entityLookType;
 
     HANDLE handlep = OpenProcess(PROCESS_VM_READ, FALSE, pid);
     ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28), &entityName, 16, NULL);
     ReadProcessMemory(handlep, (LPDWORD)(entityAddr), &entityType, 1, NULL);
     ReadProcessMemory(handlep, (LPDWORD)(entityName-0x0C), &entityNumberBl, 1, NULL);
+    ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28+OFFSET_PKM_LOOKTYPE), &entityLookType, 1, NULL);
     CloseHandle(handlep); //close handle of process
 
     obj->Set(String::NewFromUtf8(isolate, "addr"), Number::New(isolate, entityAddr));
     obj->Set(String::NewFromUtf8(isolate, "name"), String::NewFromUtf8(isolate, entityName));
     obj->Set(String::NewFromUtf8(isolate, "type"), Number::New(isolate, entityType));
+    obj->Set(String::NewFromUtf8(isolate, "lookType"), Number::New(isolate, entityLookType));
     obj->Set(String::NewFromUtf8(isolate, "counterBl"), Number::New(isolate, entityNumberBl));
     obj->Set(String::NewFromUtf8(isolate, "fAction"), Number::New(isolate, 2));
 
@@ -1331,7 +1336,7 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   input.mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
   SendInput(1,&input,sizeof(INPUT));
 
-  Sleep(70);
+  Sleep(80);
 
   input.type      = INPUT_MOUSE;
   input.mi.time = 0;
@@ -1532,6 +1537,8 @@ static void runProfile(uv_work_t *req){
   int contentLength = cProfile->sizeCommandList;
   Coords playerPos, targetPos;
   fCaveBot = TRUE; //flag mark that indicates that caveBot is running
+  //reset fPause to unpaused before start this cavebot
+  fPause = FALSE; //flag mark that indicates if bot is paused
 
   //printf("-> Reading file '%s'.json:\n", cProfile->fileName);
   //printf("{\n  fileName: '%s',\n  content:[\n", cProfile->fileName);
