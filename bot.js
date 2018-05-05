@@ -48,33 +48,46 @@ var printlog = function(arg){
   console.log(arg);
 }
 
+var audio = new Audio('../assets/audio.mp3');
+
 //first function to run. It gets moduleaddress and pid of the program too
 bl.getBattleList(function(res){
   let i;
 
   if(res.fAction == 2){
     switch(res.type){
-      case 248:
+      case 72:
         res.type = "NPC";
         break;
-      case 32: //myself
-      case 184:
+      case 104: //myself
+      case 8:
         res.type = "PLAYER";
         break;
       //case 112:
-      case 204:
+      case 28:
         res.type = "POKEMON";
         if((battlePokelist[res.addr] === 0)||(battlePokelist[res.addr] === undefined)){
           for(i=0;i<searchPokeArr.length;i++){
             if(searchPokeArr[i] == res.name){
-              battlePokelist[res.addr] = {"addr": res.addr, "name": res.name, "type": res.type, "counterBl": res.counterBl}
-              break;
+              battlePokelist[res.addr] = {
+                "addr": res.addr,
+                "name": res.name,
+                "type": res.type,
+                "lookType": res.lookType,
+                "counterBl": res.counterBl
+              }
             }
+            if((res.name === "Machamp")&&(res.lookType != 121)){
+              //https://i.imgur.com/hDB7e46.png/ shiny machamp looktype 26
+              audio.play();
+              printlog(`Shiny Machamp!`);
+            }
+            break;
           }
         }
         break;
     }
-    printlog(`0x${res.addr.toString(16).toUpperCase()}  ${res.name} ${res.type} `)
+    printlog(`0x${res.addr.toString(16).toUpperCase()}  ${res.name} ${res.type} ${res.lookType}`)
   }else{
     moduleAddr = res.moduleAddr;
     pid = res.pid;
