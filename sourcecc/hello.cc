@@ -52,6 +52,7 @@ static void registerHKF10(uv_work_t *req){
 
   Work *work = static_cast<Work*>(req->data);
 
+  //0x79 = F10
   if(RegisterHotKey(NULL, 1, NULL, 0x79)){
     MSG msg = {0};
 
