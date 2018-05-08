@@ -583,8 +583,8 @@ void printThreads(DWORD pid){
         sizeof(te.th32OwnerProcessID))&&(te.th32OwnerProcessID == pid)){
           printf("Process %d(0x%04X) Thread 0x%04x\n",
                  te.th32OwnerProcessID, te.th32OwnerProcessID, te.th32ThreadID);
-          printf("base priority  = %d\n", te.tpBasePri);
-          printf("delta priority = %d\n", te.tpDeltaPri);
+          //printf("base priority  = %d\n", te.tpBasePri);
+          //printf("delta priority = %d\n", te.tpDeltaPri);
         }
         te.dwSize = sizeof(te);
       }while (Thread32Next(h, &te));
@@ -1258,8 +1258,9 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
 
   Work* work = new Work();
-  POINT pkmSlot, reviveSlot;
-  INPUT input;
+  POINT pkmSlot;
+  //POINT pkmSlot, reviveSlot;
+  INPUT input, input2[2];
 
   Local<Object> centerObj = args[0]->ToObject();
   Local<Value> x = centerObj->Get(String::NewFromUtf8(isolate, "x"));
@@ -1267,13 +1268,92 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   pkmSlot.x = x->Int32Value();
   pkmSlot.y = y->Int32Value();
 
+/*
   Local<Object> sqmObj = args[1]->ToObject();
   x = sqmObj->Get(String::NewFromUtf8(isolate, "x"));
   y = sqmObj->Get(String::NewFromUtf8(isolate, "y"));
   reviveSlot.x = x->Int32Value();
   reviveSlot.y = y->Int32Value();
+ */
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+  input2[0].type = INPUT_KEYBOARD;
+  input2[0].ki.wScan = 0; // hardware scan code for key
+  input2[0].ki.time = 0;
+  input2[0].ki.dwExtraInfo = 0;
+  // Press the "CTRL" key
+  input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+  input2[0].ki.dwFlags = 0; // 0 for key press
+
+  //use revive by Hotkey DEL 
+  input2[1].type = INPUT_KEYBOARD;
+  input2[1].ki.wScan = 0; // hardware scan code for key
+  input2[1].ki.time = 0;
+  input2[1].ki.dwExtraInfo = 0;
+  input2[1].ki.wVk = 0x2E; // virtual-key code for the "DEL" key
+  input2[1].ki.dwFlags = 0; // 0 for key press
+
+  SendInput(2, input2,sizeof(INPUT));
+
+  //Release of "CTRL" key
+  input2[0].type = INPUT_KEYBOARD;
+  input2[0].ki.wScan = 0; // hardware scan code for key
+  input2[0].ki.time = 0;
+  input2[0].ki.dwExtraInfo = 0;
+  input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+  input2[0].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+  //Release of "DEL" key
+  input2[1].type = INPUT_KEYBOARD;
+  input2[1].ki.wScan = 0; // hardware scan code for key
+  input2[1].ki.time = 0;
+  input2[1].ki.dwExtraInfo = 0;
+  input2[1].ki.wVk = 0x2E; // virtual-key code for the "DEL" key
+  input2[1].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+  SendInput(2, input2, sizeof(INPUT));
+
+  Sleep(50);
 
   ::ZeroMemory(&input, sizeof(INPUT));
+
+  //move mouse to pkmSlot position
+  input.type = INPUT_MOUSE;
+  input.mi.dx = pkmSlot.x*65535/SCREEN_X;
+  input.mi.dy = pkmSlot.y*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+ 
+  Sleep(50);
+  
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  //left click to use revive on pkm
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags  = MOUSEEVENTF_LEFTUP;
+
+  SendInput(2,input2,sizeof(INPUT));
+
+  Sleep(230);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+
+  input2[0].type = INPUT_MOUSE;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+
+  SendInput(2,input2,sizeof(INPUT));
+
+  /*OLD Revive function
 
   //move and click revive in revive slot
   input.type = INPUT_MOUSE;
@@ -1342,6 +1422,7 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   input.mi.time = 0;
   input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
   SendInput(1,&input,sizeof(INPUT));
+  */
 
   Local<Number> val = Number::New(isolate, 1);
   Handle<Value> argv[] = {val};
@@ -1364,6 +1445,7 @@ static void registerHkRevivePkm(uv_work_t *req){
     while (GetMessage(&msg, NULL, 0, 0) != 0){
       if(msg.message == WM_HOTKEY){
 
+        //printf("0x%X pressed\n", (LONG)msg.lParam >> 16); //vk information. obs: lParam here has type 32 bits
         //UnregisterHotKey(NULL, 1);
 
         //Communication between threads(uv_work_t and uv_async_t);
@@ -1700,6 +1782,7 @@ void runProfileAsync(const FunctionCallbackInfo<Value>& args){
 }
 
 
+//stop actual caveBot profile
 void stopProfileSync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
 
@@ -1707,6 +1790,38 @@ void stopProfileSync(const FunctionCallbackInfo<Value>& args){
   //remove pause in case of bot paused. Force unpause to finish bot
   fPause = FALSE;
   //printf("fCaveBot: %d\n", fCaveBot);
+
+  Local<Number> val = Number::New(isolate, 1);
+  Handle<Value> argv[] = {val};
+
+  args.GetReturnValue().Set(val);
+}
+
+void sendKey(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+  INPUT input;
+
+  Sleep(1000);
+
+  ::ZeroMemory(&input,sizeof(INPUT));
+  input.type = INPUT_KEYBOARD;
+  input.ki.wScan = 0; // hardware scan code for key
+  input.ki.time = 0;
+  input.ki.dwExtraInfo = 0;
+
+  // Press the "END" key
+  input.ki.wVk = 0x23;
+  input.ki.dwFlags = 0; // 0 for key press
+
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(50);
+
+  // Release the "END" key
+  input.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(50);
 
   Local<Number> val = Number::New(isolate, 1);
   Handle<Value> argv[] = {val};
@@ -1730,6 +1845,7 @@ void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "getPlayerPos", getPlayerPosAsync);
   NODE_SET_METHOD(exports, "runProfile", runProfileAsync);
   NODE_SET_METHOD(exports, "stopProfileSync", stopProfileSync);
+//  NODE_SET_METHOD(exports, "sendKey", sendKey);
 }
 
 NODE_MODULE(battlelist, init)
