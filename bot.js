@@ -49,6 +49,11 @@ var printlog = function(arg){
 }
 
 var audio = new Audio('../assets/audio.mp3');
+/*
+focuscc.focusWindow(function(res){
+  bl.revivePkm();
+});
+*/
 
 //first function to run. It gets moduleaddress and pid of the program too
 bl.getBattleList(function(res){
@@ -80,7 +85,7 @@ bl.getBattleList(function(res){
             if((res.name === "Machamp")&&(res.lookType != 121)){
               //https://i.imgur.com/hDB7e46.png/ shiny machamp looktype 26
               audio.play();
-              printlog(`Shiny Machamp!`);
+              printlog(`\nShiny Machamp!\n`);
             }
             break;
           }
@@ -100,67 +105,11 @@ mouse.getCursorPosbyClick(function(res){
 });
 */
 
-divScreenCoords = document.getElementById("screenCoords");
-divScreenCoords.addEventListener("click", function(){
-    if(!fBtnScreenCoords){
-      fBtnScreenCoords = 1;
-
-      focuscc.focusWindow(function(res){
-        //win.minimize();
-
-        //select game window
-        sharexNode.getScreenResolution(function(res){
-          updateScreenCoords(res);
-          fBtnScreenCoords = 0;
-        });
-        //#5db31c = green
-      });
-    }
-});
 
 
-//sqm's in the screen: 15x11
-function updateScreenCoords(res){
-  console.log(res);
-
-  //res = { x: 970, y: 136, w: 442, h: 324 }
-
-  res.x = parseInt(res.x);
-  res.y = parseInt(res.y);
-  res.w = parseInt(res.w);
-  res.h = parseInt(res.h);
-
-  var coordxEl = document.querySelector("input[name='coordx']");
-  coordxEl.value = res.x;
-
-  var coordyEl = document.querySelector("input[name='coordy']");
-  coordyEl.value = res.y;
-
-  var coordwEl = document.querySelector("input[name='coordw']");
-  coordwEl.value = res.w;
-
-  var coordhEl = document.querySelector("input[name='coordh']");
-  coordhEl.value = res.h;
-
-  //length and height for each SQM
-  sqm.length = parseInt((res.w/15).toFixed(2));
-  sqm.height = parseInt((res.h/11).toFixed(2));
-
-  console.log("Sqm: "+sqm.length+"x"+sqm.height);
-
-  center.x = res.x + res.w/2;
-  center.y = res.y + res.h/2;
-
-  console.log("Center: "+center.x+"x"+center.y);
-
-  console.log("Screen Coords captured");
-
-  bl.setScreenConfig(center, sqm, function(){
-  });
-}
 
 // ============  Global Bot Hotkeys =====================
-
+//f10 key = pause
 bl.registerHKF10Async(function(res){
   fPause = !fPause;
   console.log(`F10 key detected!! Status: ${fPause}`);
@@ -176,16 +125,18 @@ addon.registerHKF10Async(function(res){
 });
 */
 
+//delete key
 bl.registerHkRevivePkm(function(res){
   if(fRevive === 1){
-    //console.log("REVIVE key detected!!");
-    bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
+    console.log("REVIVE key detected!!");
+    focuscc.focusWindow(function(res){
+      bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
+    });
   }
 });
 
-// ============  Feature Buttons =====================
 
-
+// ============  Featured Buttons =====================
 divFishing = document.getElementById("fishing");
 divFishing.addEventListener("click", function(){
   if(center.x != 0 & center.y != 0){
@@ -203,27 +154,49 @@ divFishing.addEventListener("click", function(){
 divRevive = document.getElementById("revive");
 divRevive.addEventListener("click", function(){
   if(fRevive === 0){
-    fRevive=2; //cursorPosbyClick is waiting for a response
+    focuscc.focusWindow(function(res){
+      fRevive=2; //cursorPosbyClick is waiting for a response
 
-    //getting pkm slot pos
-    mouse.getCursorPosbyClick(function(res){
-      console.log(`PkmSlot) res.x: ${res.x} res.y: ${res.y}`);
-      pos.pkmSlot.x = res.x;
-      pos.pkmSlot.y = res.y;
-    });
+      //getting pkm slot pos
+      mouse.getCursorPosbyClick(function(res){
+        console.log(`PkmSlot) res.x: ${res.x} res.y: ${res.y}`);
+        pos.pkmSlot.x = res.x;
+        pos.pkmSlot.y = res.y;
+        divRevive.style.background = 'linear-gradient(#774247, #f7e53f)';
+        fRevive=1;
+      });
 
-    //getting revive slot pos
-    mouse.getCursorPosbyClick(function(res){
-      console.log(`ReviveSlot) res.x: ${res.x} res.y: ${res.y}`);
-      pos.reviveSlot.x = res.x;
-      pos.reviveSlot.y = res.y;
-      divRevive.style.background = 'linear-gradient(#774247, #f7e53f)';
-      fRevive=1;
+      /*
+      //getting revive slot pos
+      mouse.getCursorPosbyClick(function(res){
+        console.log(`ReviveSlot) res.x: ${res.x} res.y: ${res.y}`);
+        pos.reviveSlot.x = res.x;
+        pos.reviveSlot.y = res.y;
+      });
+      */
     });
   }else if (fRevive === 1){
     divRevive.style.background = 'linear-gradient(red, #774247)';
     fRevive=0;
   }
+});
+
+divScreenCoords = document.getElementById("screenCoords");
+divScreenCoords.addEventListener("click", function(){
+    if(!fBtnScreenCoords){
+      fBtnScreenCoords = 1;
+
+      focuscc.focusWindow(function(res){
+        //win.minimize();
+
+        //select game window
+        sharexNode.getScreenResolution(function(res){
+          updateScreenCoords(res);
+          fBtnScreenCoords = 0;
+        });
+        //#5db31c = green
+      });
+    }
 });
 
 var fLookForFighting = 0;
@@ -274,7 +247,8 @@ function startFishing(){
     fPkmSummoned = bl.isPlayerPkmSummoned();
     console.log(`is pokemon summoned? ${fPkmSummoned.status}`);
     if(fPkmSummoned.status == "1" && fRevive === 1){
-      bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
+      //bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
+      bl.revivePkm(pos.pkmSlot, {x: 0, y: 0});
     }
 
     //move mouse 2 sqm of distance to top
@@ -461,4 +435,46 @@ async function lookForFighting(){
   }
 
   fLookForFighting = 0;
+}
+
+// ============  Auxiliar Functions =====================
+
+//sqm's in the screen: 15x11
+function updateScreenCoords(res){
+  console.log(res);
+
+  //res = { x: 970, y: 136, w: 442, h: 324 }
+
+  res.x = parseInt(res.x);
+  res.y = parseInt(res.y);
+  res.w = parseInt(res.w);
+  res.h = parseInt(res.h);
+
+  var coordxEl = document.querySelector("input[name='coordx']");
+  coordxEl.value = res.x;
+
+  var coordyEl = document.querySelector("input[name='coordy']");
+  coordyEl.value = res.y;
+
+  var coordwEl = document.querySelector("input[name='coordw']");
+  coordwEl.value = res.w;
+
+  var coordhEl = document.querySelector("input[name='coordh']");
+  coordhEl.value = res.h;
+
+  //length and height for each SQM
+  sqm.length = parseInt((res.w/15).toFixed(2));
+  sqm.height = parseInt((res.h/11).toFixed(2));
+
+  console.log("Sqm: "+sqm.length+"x"+sqm.height);
+
+  center.x = res.x + res.w/2;
+  center.y = res.y + res.h/2;
+
+  console.log("Center: "+center.x+"x"+center.y);
+
+  console.log("Screen Coords captured");
+
+  bl.setScreenConfig(center, sqm, function(){
+  });
 }
