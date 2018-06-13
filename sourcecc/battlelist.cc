@@ -133,20 +133,21 @@ Coords getPlayerPosC();
 DWORD GetProcessThreadID(DWORD pID);
 DWORD_PTR dwGetModuleBaseAddress(DWORD pid, TCHAR *szModuleName);
 void printThreads(DWORD pid);
+int DNcheckCurrPkmLife();
 
 //const
 
 /* DIRECTX9 */
 //global allocations (with AOB injection)
-const DWORD_PTR BASEADDR_CREATURE_GENERATOR = 0x0ADE0000; //_creatureBase
+const DWORD_PTR BASEADDR_CREATURE_GENERATOR = 0x047C0000; //_creatureBase
 //code cave with fixed address of the game
-const DWORD_PTR BASEADDR_CREATURE_GEN       = 0x00717D4F;
+const DWORD_PTR BASEADDR_CREATURE_GEN       = 0x00719001;
 //adress for position change (writes into pokemon pos. when something moves in screen)
-const DWORD_PTR INSTR_POSADDR               = 0x1461A4;
+//const DWORD_PTR INSTR_POSADDR               = 0x1461A4; 
 //use moduleAddress as base (4 bytes) - 04/04
-const DWORD_PTR OFFSET_PLAYER_POSX          = 0x395840;
-const DWORD_PTR OFFSET_PLAYER_POSY          = 0x395850;
-const DWORD_PTR OFFSET_PLAYER_POSZ          = 0x395854; //1 byte is enough here
+const DWORD_PTR OFFSET_PLAYER_POSX          = 0x393840;
+const DWORD_PTR OFFSET_PLAYER_POSY          = 0x393844;
+const DWORD_PTR OFFSET_PLAYER_POSZ          = 0x393848; //1 byte is enough here
 //use creatureAddress Name as base
 const DWORD_PTR OFFSET_PKM_NAME_LENGTH      = 0x24; //byte
 const DWORD_PTR OFFSET_PKM_NAME             = 0x28;
@@ -155,6 +156,9 @@ const DWORD_PTR OFFSET_PKM_POSY             = 0x10;
 const DWORD_PTR OFFSET_PKM_POSZ             = 0x14;
 const DWORD_PTR OFFSET_PKM_LIFE             = 0x38;
 const DWORD_PTR OFFSET_PKM_LOOKTYPE         = 0x1C;
+//Addresses to current PKM life in slot (DOUBLE)
+const DWORD_PTR BASEADDR_CURR_PKM_LIFE      = 0x00393320;
+const DWORD_PTR OFFSET_CURR_PKM_LIFE        = 0x3C8;
 //pointer to battlelist counter of active creatures
 const DWORD_PTR BASEADDR_BLACOUNT           = 0x0038E820;
 const DWORD_PTR OFFSET_BLCOUNT_P1           = 0x33C;
@@ -1260,7 +1264,7 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   Work* work = new Work();
   POINT pkmSlot;
   //POINT pkmSlot, reviveSlot;
-  INPUT input, input2[2];
+  INPUT input, input2[2], input3[3];
 
   Local<Object> centerObj = args[0]->ToObject();
   Local<Value> x = centerObj->Get(String::NewFromUtf8(isolate, "x"));
@@ -1341,17 +1345,21 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
 
   Sleep(230);
 
-  ::ZeroMemory(input2, 2*sizeof(INPUT));
+  ::ZeroMemory(input3, 3*sizeof(INPUT));
 
-  input2[0].type = INPUT_MOUSE;
-  input2[0].mi.time = 0;
-  input2[0].mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+  input3[0].type = INPUT_MOUSE;
+  input3[0].mi.time = 0;
+  input3[0].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
 
-  input2[0].type = INPUT_MOUSE;
-  input2[1].mi.time = 0;
-  input2[1].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+  input3[1].type = INPUT_MOUSE;
+  input3[1].mi.time = 0;
+  input3[1].mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
 
-  SendInput(2,input2,sizeof(INPUT));
+  input3[2].type = INPUT_MOUSE;
+  input3[2].mi.time = 0;
+  input3[2].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+
+  SendInput(3, input3, sizeof(INPUT));
 
   /*OLD Revive function
 
@@ -1621,6 +1629,12 @@ static void runProfile(uv_work_t *req){
   fCaveBot = TRUE; //flag mark that indicates that caveBot is running
   //reset fPause to unpaused before start this cavebot
   fPause = FALSE; //flag mark that indicates if bot is paused
+  int fcheck = 0;
+
+  DWORD baseCurrPkmLife;
+  DOUBLE currPkmLife, currPkmMaxLife;
+  int percent;
+  HANDLE handleLife;
 
   //printf("-> Reading file '%s'.json:\n", cProfile->fileName);
   //printf("{\n  fileName: '%s',\n  content:[\n", cProfile->fileName);
@@ -1642,6 +1656,18 @@ static void runProfile(uv_work_t *req){
 
       }else if(strcmp(cProfile->commands[i].cmdType, "check") == 0){ //Move Command
         //printf("pos: [ ");
+        /*
+    handleLife = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+    ReadProcessMemory(handleLife, (LPDWORD)(moduleAddr+BASEADDR_CURR_PKM_LIFE), &baseCurrPkmLife, 4, NULL);
+    ReadProcessMemory(handleLife, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE), &currPkmLife, 8, NULL);
+    ReadProcessMemory(handleLife, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE+0x8), &currPkmMaxLife, 8, NULL);
+    percent = (currPkmLife/currPkmMaxLife)*100;
+    printf("\ncurr pkm life: %d, MAX life: %d\n", (int)currPkmLife, (int)currPkmMaxLife);
+    printf("current pokemon percent: %d\n", percent);
+    printf("baseCurrPkmLife: 0x%X\n", baseCurrPkmLife);
+    printf("baseCurrPkmLife+3C8: 0x%X\n", baseCurrPkmLife+OFFSET_CURR_PKM_LIFE);
+    */
+fcheck = DNcheckCurrPkmLife();
         playerPos = getPlayerPosC();
         printf("player position: %d, %d, %d\n", playerPos.x, playerPos.y, playerPos.z);
         if(
@@ -1695,7 +1721,6 @@ static void runProfileComplete(uv_work_t *req, int status){
 
   WorkProfile *work = static_cast<WorkProfile*>(req->data);
 
-
   //prepare error vars
   Local<Number> val = Number::New(isolate, 1);
   Handle<Value> argv[] = {val};
@@ -1745,18 +1770,19 @@ void runProfileAsync(const FunctionCallbackInfo<Value>& args){
   std::string cmdType;
   for( int i = 0; i < contentLength; i++ ){
     arrObj = Local<Object>::Cast(contentArray->Get(i));
+
+    //read cmdType
     cmdTypeValue = arrObj->Get(String::NewFromUtf8(isolate, "cmdType"));
     v8::String::Utf8Value cmdType_utfValue(cmdTypeValue);
     cmdType = std::string(*cmdType_utfValue, cmdType_utfValue.length()).c_str();
-
     //malloc cmdType char*
     cProfile->commands[i].cmdType = (char*)malloc(strlen(cmdType.c_str())+1);
     strcpy(cProfile->commands[i].cmdType, cmdType.c_str());
 
+    //check what command you have and execute the command
     if(strcmp(cProfile->commands[i].cmdType, "sleep") == 0){
       value = arrObj->Get(String::NewFromUtf8(isolate, "value"));
       cProfile->commands[i].value = value->Int32Value();
-
     }else if(strcmp(cProfile->commands[i].cmdType, "check") == 0){
       posArray = Local<Array>::Cast(
         arrObj->Get(
@@ -1829,6 +1855,75 @@ void sendKey(const FunctionCallbackInfo<Value>& args){
   args.GetReturnValue().Set(val);
 }
 
+//Decision Node
+int DNcheckCurrPkmLife(){
+  DWORD baseCurrPkmLife;
+  DOUBLE currPkmLife, currPkmMaxLife;
+  int percent;
+  HANDLE handleLife;
+
+  handleLife = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+  percent = (currPkmLife/currPkmMaxLife)*100;
+
+  if(handleLife != NULL){
+    //printf("process openned successfully\n");
+
+    ReadProcessMemory(handleLife, (LPDWORD)(moduleAddr+BASEADDR_CURR_PKM_LIFE), &baseCurrPkmLife, 4, NULL);
+    ReadProcessMemory(handleLife, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE), &currPkmLife, 8, NULL);
+    ReadProcessMemory(handleLife, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE+0x8), &currPkmMaxLife, 8, NULL);
+
+    percent = (currPkmLife/currPkmMaxLife)*100;
+    printf("\ncurrent pokemon percent: %d\n\n", percent);
+
+    while((percent<40)&&(fCaveBot)){ 
+      //Checking HP part
+      ReadProcessMemory(handleLife, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE), &currPkmLife, 8, NULL);
+      ReadProcessMemory(handleLife, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE+0x8), &currPkmMaxLife, 8, NULL);
+
+      percent = (currPkmLife/currPkmMaxLife)*100;
+      printf("current pokemon percent: %d\n", percent);
+      /*printf("\ncurr pkm life: %d, MAX life: %d\n", (int)currPkmLife, (int)currPkmMaxLife);
+      printf("baseCurrPkmLife: 0x%X\n", baseCurrPkmLife);
+      printf("baseCurrPkmLife+3C8: 0x%X\n", baseCurrPkmLife+OFFSET_CURR_PKM_LIFE);*/
+
+      //Heal part:
+      //wait for regen to heal or use potion
+      Sleep(5000);
+    }
+    CloseHandle(handleLife);
+  }else{
+    printf("Couldn\'t open process for reading\n");
+  }
+  return 1;
+}
+
+void testread(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  DWORD_PTR baseCurrPkmLife;
+  DOUBLE currPkmLife, currPkmMaxLife; //DOUBLE =  8 bytes = 32 bits(x86 architeture)
+  int percent;
+
+  HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+  ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_CURR_PKM_LIFE), &baseCurrPkmLife, 4, NULL);
+  ReadProcessMemory(handle, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE), &currPkmLife, 8, NULL);
+  ReadProcessMemory(handle, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE+0x8), &currPkmMaxLife, 8, NULL);
+  CloseHandle(handle);
+
+  percent = (currPkmLife/currPkmMaxLife)*100;
+
+  //printf("sizeof double: %lu, int: %lu, dword: %lu\n", sizeof(DOUBLE), sizeof(4), sizeof(DWORD));
+  printf("\ncurr pkm life: %d, MAX life: %d\n", (int)currPkmLife, (int)currPkmMaxLife);
+  printf("current pokemon percent: %d\n", percent);
+  printf("baseCurrPkmLife: 0x%X\n", baseCurrPkmLife);
+  printf("baseCurrPkmLife+3C8: 0x%X\n", baseCurrPkmLife+OFFSET_CURR_PKM_LIFE);
+
+  Local<Number> val = Number::New(isolate, 1);
+  Handle<Value> argv[] = {val};
+
+  args.GetReturnValue().Set(val);
+}
+
 void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "setScreenConfig", setScreenConfigSync);
   NODE_SET_METHOD(exports, "registerHKF10Async", registerHKF10Async);
@@ -1845,6 +1940,7 @@ void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "getPlayerPos", getPlayerPosAsync);
   NODE_SET_METHOD(exports, "runProfile", runProfileAsync);
   NODE_SET_METHOD(exports, "stopProfileSync", stopProfileSync);
+  NODE_SET_METHOD(exports, "testread", testread);
 //  NODE_SET_METHOD(exports, "sendKey", sendKey);
 }
 
