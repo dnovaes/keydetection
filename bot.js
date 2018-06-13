@@ -69,7 +69,7 @@ bl.getBattleList(function(res){
         res.type = "PLAYER";
         break;
       //case 112:
-      case 28:
+      case 76:
         res.type = "POKEMON";
         if((battlePokelist[res.addr] === 0)||(battlePokelist[res.addr] === undefined)){
           for(i=0;i<searchPokeArr.length;i++){
@@ -113,6 +113,7 @@ mouse.getCursorPosbyClick(function(res){
 bl.registerHKF10Async(function(res){
   fPause = !fPause;
   console.log(`F10 key detected!! Status: ${fPause}`);
+  //bl.testread();
 });
 /*
 addon.registerHKF10Async(function(res){
