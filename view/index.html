@@ -80,7 +80,7 @@
         <div class="container-title"> functions</div>
         <div class="features">
           <div id="checkpoint" class="feature-el"></div>
-          <div id="click" class="feature-el"></div>
+          <div id="hand" class="feature-el"></div>
           <div id="keyboard" class="feature-el"></div>
           <div class="clear-float"></div>
           <div id="battle" class="feature-el"></div>
@@ -127,6 +127,7 @@
     btNew = document.getElementById("new");
     btSleep = document.getElementById("sleep");
     btStart = document.getElementById("btStart");
+    btHand = document.querySelector("#hand");
 
     /* Functions */
     var removeCommandEl = (e) => {
@@ -213,6 +214,12 @@
               newCommand.dataset.value = obj.content[i].value;
               newCommand.innerHTML = `<div class="sel-text">Sleep for ${obj.content[i].value/1000}s</div><div class="remove-el"></div>`;
               break;
+            case 'mouseclick':
+              newCommand.dataset.clickType = obj.content[i].clickType;
+              newCommand.dataset.posx = obj.content[i].pos[0];
+              newCommand.dataset.posy = obj.content[i].pos[1];
+              newCommand.innerHTML = `<div class="sel-text">${obj.content[i].clickType}click (${obj.content[i].pos[0]}, ${obj.content[i].pos[1]}) </div><div class="remove-el"></div>`;
+              break;
           }
           listCommands.appendChild(newCommand);
         }
@@ -226,6 +233,7 @@
 
       obj.fileName = fileName;
       obj.content = [];
+            console.log(listCommands.children[1]);
       for(var i=0; i<listCommands.children.length; i++){
         obj.content[i] = {};
         obj.content[i].cmdType = listCommands.children[i].dataset.cmdType;
@@ -236,6 +244,12 @@
           case 'sleep':
             obj.content[i].value = listCommands.children[i].dataset.value;
             break;
+          case 'mouseclick':
+            obj.content[i].pos = [];
+            obj.content[i].pos.push(listCommands.children[i].dataset.posx);
+            obj.content[i].pos.push(listCommands.children[i].dataset.posy);
+            obj.content[i].clickType = listCommands.children[i].dataset.clickType;
+            break;
           default:
             console.log("default choosen");
             break;
@@ -245,6 +259,16 @@
     }
 
     /* Events */
+    /*
+    var body = document.querySelector('body');
+    body.onkeydown = function (e){
+      if ( !e.metaKey ) {
+        e.preventDefault();
+      }
+      console.log(`0x${e.keyCode.toString(16).toUpperCase()} key was pressed.`);
+    };
+    */
+
     divCaveBot.addEventListener("mouseover", function(){
       divCaveIcon.style.backgroundImage = "url('../img/red_champion.gif')";
     });
@@ -327,7 +351,7 @@
 
         //load file
         let obj = loadCommandsToObj();
-        //console.log(JSON.stringify(obj));
+        console.log(JSON.stringify(obj));
 
         //focus window and run the cave with the loaded file
         focuscc.focusWindow(function(res){
@@ -354,7 +378,7 @@
         divPrompt.classList.add("prompt");
         divPrompt.classList.add("lock-el");
         divPrompt.innerHTML = `
-          <div class="text">Wait for how much seconds?</div>
+          <div class="text">Wait for how many seconds?</div>
           <input name="prompt" type="number"/>
           <div class="btConfirm">Ok</div>
         `;
@@ -378,6 +402,81 @@
             removeLockScreen();
           }
         });
+      }
+    });
+
+    btHand.addEventListener("click", function(){
+      if(!lockFlag){
+        addLockScreen();
+        let divPrompt = document.createElement("div");
+        divPrompt.classList.add("prompt");
+        divPrompt.classList.add("lock-el");
+        divPrompt.innerHTML = `
+          <button name="left" class="clickType">LeftClick</button>
+          <button name="right" class="clickType">RightClick</button>
+        `;
+        document.body.appendChild(divPrompt);
+
+        let btsClickType = document.querySelectorAll(".clickType");
+        btsClickType.forEach(function(bt, i) {
+          if(i==0){
+            //leftclick
+            bt.addEventListener("click", function(){
+              focuscc.focusWindow(function(res){
+                //getting click position
+                mouse.getCursorPosbyClick(function(res){
+                  let newCommand = document.createElement("li");
+                  newCommand.classList.add("sel-el");
+                  newCommand.dataset.cmdType = "mouseclick";
+                  newCommand.dataset.clickType= "left";
+                  newCommand.dataset.posx= res.x;
+                  newCommand.dataset.posy= res.y;
+                  newCommand.addEventListener("click", removeCommandEl);
+                  newCommand.innerHTML = `<div class="sel-text">leftclick (${res.x}, ${res.y})</div><div class="remove-el"></div>`;
+                  listCommands.appendChild(newCommand);
+                  removeLockScreen();
+                });
+              });
+            });
+          }else{
+            //rightclick
+            bt.addEventListener("click", function(){
+              focuscc.focusWindow(function(res){
+                //getting click position
+                mouse.getCursorPosbyClick(function(res){
+                  let newCommand = document.createElement("li");
+                  newCommand.classList.add("sel-el");
+                  newCommand.dataset.cmdType = "mouseclick";
+                  newCommand.dataset.clickType= "right";
+                  newCommand.dataset.posx= res.x;
+                  newCommand.dataset.posy= res.y;
+                  newCommand.addEventListener("click", removeCommandEl);
+                  newCommand.innerHTML = `<div class="sel-text">rightclick (${res.x}, ${res.y})</div><div class="remove-el"></div>`;
+                  listCommands.appendChild(newCommand);
+                  removeLockScreen();
+                });
+              });
+            });
+          }
+        });
+        /*
+        btConfirmPrompt.addEventListener("click", function(){
+          let input = document.querySelector(".prompt input");
+          if(input.value){
+            input.value*=1000;
+            //console.log(`value in miliseconds: ${input.value}`);
+
+            let newCommand = document.createElement("li");
+            newCommand.classList.add("sel-el");
+            newCommand.dataset.cmdType = "sleep";
+            newCommand.dataset.value = input.value;
+            newCommand.addEventListener("click", removeCommandEl);
+            newCommand.innerHTML = `<div class="sel-text">Sleep for ${input.value/1000}s</div><div class="remove-el"></div>`;
+            listCommands.appendChild(newCommand);
+            removeLockScreen();
+          }
+        });
+        */
       }
     });
 

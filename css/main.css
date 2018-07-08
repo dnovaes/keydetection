@@ -208,7 +208,8 @@ body{
 }
 
 #console{
-  width: 245px;
+  -webkit-app-region: no-drag;
+  width: 95%;
   height: 70px;
   color: #f7e53f;
   padding: 2px;
@@ -240,7 +241,7 @@ body{
 
 #container-route{
   position: relative;
-  width: 37%;
+  width: 40%;
   height: 100%;
   float:left;
 }
@@ -358,6 +359,7 @@ ul {
   font-weight:bold;
   height: 25px;
   line-height: 25px;
+  overflow: hidden;
 }
 
 li:last-child {
@@ -392,7 +394,7 @@ li:last-child {
   background-position: center;
 }
 
-#click{
+#hand{
   background: url("../img/click.png") no-repeat;
   background-size: contain;
   background-position: center;
@@ -425,6 +427,7 @@ li:last-child {
 .sel-text{
   width: 85%;
   float: left;
+  font-size: 14px;
 }
 
 .remove-el{
@@ -547,4 +550,21 @@ li:last-child {
   line-height: 50px;
   text-align: center;
   margin-top: -4px;
+}
+
+button.clickType{
+  width: 100px;
+  height: 25px;
+  line-height: 13px;
+  margin: 20px 1% 0 3%;
+  border-radius: 10px;
+  float: left;
+  padding: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button.clickType:hover{
+  background-color: #f7e53f;
+  color: black;
 }
