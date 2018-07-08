@@ -36,16 +36,23 @@ git clone this project and install dependencies
 ```
 git clone https://github.com/dnovaes/keydetection.git
 cd keydetection/
+npm install electron --save
+npm install electron-rebuild --save-dev
+npm install node-gyp --save-dev
 npm install
 ```
 
-Now the magic as the last step. Rebuild your native modules for electron to work even with your other
+Now the magic as last step. Rebuild your native modules for electron to work even with your other
 native modules (C++ in this case). And start the application.
+```
+npm run build
+npm start
+```
+or run, if the code above didnt work:
 ```
 ./node_modules/.bin/electron-rebuild.cmd
 npm start
 ```
-
 Note: If you're using Linux Bash for Windows, [see this guide](https://www.howtogeek.com/261575/how-to-run-graphical-linux-desktop-applications-from-windows-10s-bash-shell/) or use `node` from the command prompt.
 
 # Issues

@@ -12,7 +12,7 @@
   },
   "scripts": {
     "start": "electron .",
-    "install": "node-gyp rebuild && electron-rebuild"
+    "build": "node-gyp rebuild && electron-rebuild"
   },
   "repository": {
     "type": "git",
