@@ -89,7 +89,7 @@ struct WorkFish{
 };
 
 typedef struct commandList{
-  char* cmdType;
+  char *cmdType, *clickType;
   int pos[3];
   int value;
 }CommandList;
@@ -144,7 +144,7 @@ const DWORD_PTR BASEADDR_CREATURE_GENERATOR = 0x047C0000; //_creatureBase
 const DWORD_PTR BASEADDR_CREATURE_GEN       = 0x00719001;
 //adress for position change (writes into pokemon pos. when something moves in screen)
 //const DWORD_PTR INSTR_POSADDR               = 0x1461A4; 
-//use moduleAddress as base (4 bytes) - 04/04
+//use moduleAddress as base (4 bytes)
 const DWORD_PTR OFFSET_PLAYER_POSX          = 0x393840;
 const DWORD_PTR OFFSET_PLAYER_POSY          = 0x393844;
 const DWORD_PTR OFFSET_PLAYER_POSZ          = 0x393848; //1 byte is enough here
@@ -1635,6 +1635,7 @@ static void runProfile(uv_work_t *req){
   DOUBLE currPkmLife, currPkmMaxLife;
   int percent;
   HANDLE handleLife;
+  INPUT input2[2];
 
   //printf("-> Reading file '%s'.json:\n", cProfile->fileName);
   //printf("{\n  fileName: '%s',\n  content:[\n", cProfile->fileName);
@@ -1649,25 +1650,27 @@ static void runProfile(uv_work_t *req){
       //printf("    {cmdType: '%s', ", cProfile->commands[i].cmdType);
       printf("\n\nRunning command %d\n", i);
 
-      if(strcmp(cProfile->commands[i].cmdType, "sleep") == 0){ //Sleep Command
+      if(strcmp(cProfile->commands[i].cmdType, "sleep") == 0){ 
+        //Sleep Function
         //printf("value: '%d'}\n", cProfile->commands[i].value);
         printf("Sleeping...%ds\n", cProfile->commands[i].value);
         Sleep(cProfile->commands[i].value);
 
-      }else if(strcmp(cProfile->commands[i].cmdType, "check") == 0){ //Move Command
+      }else if(strcmp(cProfile->commands[i].cmdType, "check") == 0){
+        //Move Function 
         //printf("pos: [ ");
         /*
-    handleLife = OpenProcess(PROCESS_VM_READ, FALSE, pid);
-    ReadProcessMemory(handleLife, (LPDWORD)(moduleAddr+BASEADDR_CURR_PKM_LIFE), &baseCurrPkmLife, 4, NULL);
-    ReadProcessMemory(handleLife, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE), &currPkmLife, 8, NULL);
-    ReadProcessMemory(handleLife, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE+0x8), &currPkmMaxLife, 8, NULL);
-    percent = (currPkmLife/currPkmMaxLife)*100;
-    printf("\ncurr pkm life: %d, MAX life: %d\n", (int)currPkmLife, (int)currPkmMaxLife);
-    printf("current pokemon percent: %d\n", percent);
-    printf("baseCurrPkmLife: 0x%X\n", baseCurrPkmLife);
-    printf("baseCurrPkmLife+3C8: 0x%X\n", baseCurrPkmLife+OFFSET_CURR_PKM_LIFE);
-    */
-fcheck = DNcheckCurrPkmLife();
+        handleLife = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+        ReadProcessMemory(handleLife, (LPDWORD)(moduleAddr+BASEADDR_CURR_PKM_LIFE), &baseCurrPkmLife, 4, NULL);
+        ReadProcessMemory(handleLife, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE), &currPkmLife, 8, NULL);
+        ReadProcessMemory(handleLife, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE+0x8), &currPkmMaxLife, 8, NULL);
+        percent = (currPkmLife/currPkmMaxLife)*100;
+        printf("\ncurr pkm life: %d, MAX life: %d\n", (int)currPkmLife, (int)currPkmMaxLife);
+        printf("current pokemon percent: %d\n", percent);
+        printf("baseCurrPkmLife: 0x%X\n", baseCurrPkmLife);
+        printf("baseCurrPkmLife+3C8: 0x%X\n", baseCurrPkmLife+OFFSET_CURR_PKM_LIFE);
+        */
+        fcheck = DNcheckCurrPkmLife();
         playerPos = getPlayerPosC();
         printf("player position: %d, %d, %d\n", playerPos.x, playerPos.y, playerPos.z);
         if(
@@ -1709,6 +1712,65 @@ fcheck = DNcheckCurrPkmLife();
         }
         printf(" ]}\n");
         */
+      }else if(strcmp(cProfile->commands[i].cmdType, "mouseclick") == 0){
+
+        printf("Running 'mouseclick' function\n");
+
+        ::ZeroMemory(input2, 2*sizeof(INPUT));
+        input2[0].type = INPUT_KEYBOARD;
+        input2[0].ki.wScan = 0; // hardware scan code for key
+        input2[0].ki.time = 0;
+        input2[0].ki.dwExtraInfo = 0;
+        // Press the "CTRL" key
+        input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+        input2[0].ki.dwFlags = 0; // 0 for key press
+
+        //use revive by Hotkey DEL 
+        input2[1].type = INPUT_KEYBOARD;
+        input2[1].ki.wScan = 0; // hardware scan code for key
+        input2[1].ki.time = 0;
+        input2[1].ki.dwExtraInfo = 0;
+        input2[1].ki.wVk = 0xDC; // virtual-key code for the "PAGE DOWN" key
+        input2[1].ki.dwFlags = 0; // 0 for key press
+
+        SendInput(2, input2,sizeof(INPUT));
+
+        //Release of "CTRL" key
+        input2[0].type = INPUT_KEYBOARD;
+        input2[0].ki.wScan = 0; // hardware scan code for key
+        input2[0].ki.time = 0;
+        input2[0].ki.dwExtraInfo = 0;
+        input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+        input2[0].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+        //Release of "DEL" key
+        input2[1].type = INPUT_KEYBOARD;
+        input2[1].ki.wScan = 0; // hardware scan code for key
+        input2[1].ki.time = 0;
+        input2[1].ki.dwExtraInfo = 0;
+        input2[1].ki.wVk = 0xDC; // virtual-key code for the "PAGE DOWN" key
+        input2[1].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+        SendInput(2, input2, sizeof(INPUT));
+
+        SetCursorPos(cProfile->commands[i].pos[0], cProfile->commands[i].pos[1]);
+
+        Sleep(500);
+        
+        ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+        //left click to use item on hotkey
+        input2[0].type = INPUT_MOUSE;
+        input2[0].mi.time = 0;
+        input2[0].mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
+
+        input2[1].type = INPUT_MOUSE;
+        input2[1].mi.time = 0;
+        input2[1].mi.dwFlags  = MOUSEEVENTF_LEFTUP;
+
+        SendInput(2, input2, sizeof(INPUT));
+
+        Sleep(500);
       }
     }
   }
@@ -1764,10 +1826,10 @@ void runProfileAsync(const FunctionCallbackInfo<Value>& args){
   cProfile->commands = (CommandList*)malloc(contentLength*sizeof(struct commandList));
   
   Local<Object> arrObj;
-  Local<Value> cmdTypeValue, value;
+  Local<Value> cmdTypeValue, value, clickTypeValue;
   Local<Array> posArray;
 
-  std::string cmdType;
+  std::string cmdType, clickType;
   for( int i = 0; i < contentLength; i++ ){
     arrObj = Local<Object>::Cast(contentArray->Get(i));
 
@@ -1794,6 +1856,27 @@ void runProfileAsync(const FunctionCallbackInfo<Value>& args){
         value = Local<Value>::Cast(posArray->Get(j));
         cProfile->commands[i].pos[j] = value->Int32Value();
       }
+    }else if(strcmp(cProfile->commands[i].cmdType, "mouseclick") == 0){
+      //read positions to cProfile struct
+      posArray = Local<Array>::Cast(
+        arrObj->Get(
+          String::NewFromUtf8(isolate, "pos")
+        )
+      );
+
+      for(unsigned int j=0; j < posArray->Length(); j++ ){
+        value = Local<Value>::Cast(posArray->Get(j));
+        cProfile->commands[i].pos[j] = value->Int32Value();
+      }
+
+      //read clickType (left or right) to cProfile struct
+      clickTypeValue = arrObj->Get(String::NewFromUtf8(isolate, "clickType"));
+      v8::String::Utf8Value clickType_utfValue(clickTypeValue);
+      clickType = std::string(*clickType_utfValue, clickType_utfValue.length()).c_str();
+      //malloc clickType char*
+      cProfile->commands[i].clickType = (char*)malloc(strlen(clickType.c_str())+1);
+      strcpy(cProfile->commands[i].clickType, clickType.c_str());
+
     }
 
   }
