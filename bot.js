@@ -64,8 +64,8 @@ bl.getBattleList(function(res){
       case 72:
         res.type = "NPC";
         break;
-      case 104: //myself
-      case 8:
+      case 7: //myself
+      case 56:
         res.type = "PLAYER";
         break;
       //case 112:
@@ -252,7 +252,7 @@ function startFishing(){
       bl.revivePkm(pos.pkmSlot, {x: 0, y: 0});
     }
 
-    //move mouse 2 sqm of distance to top
+    //move mouse 2 sqm distance to the top from the caracter
     coords.x = center.x+(3*sqm.length);
     coords.y = center.y+(0*sqm.height);
     coords.y = coords.y+(sqm.height/3);
