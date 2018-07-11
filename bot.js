@@ -217,7 +217,7 @@ btCheckpoint.addEventListener("click", function(){
   newCommand.addEventListener("click", removeCommandEl);
   bl.getPlayerPos(function(res){
     newCommand.innerHTML = `<div class="sel-text">${res.posx},${res.posy},${res.posz}</div><div class="remove-el"></div>`;
-    listCommands.appendChild(newCommand);
+    addCommandToList(newCommand);
   });
 });
 
