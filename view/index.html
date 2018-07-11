@@ -69,7 +69,9 @@
           <div class="icon-el">-</div>
         </div>
         <select name="profile" id="profile"></select>
+
         <ul class="list-commands"></ul>
+
         <div class="manage-options">
           <div id="new" class="el">New</div>
           <div id="save" class="el">Save</div>
@@ -133,6 +135,26 @@
     var removeCommandEl = (e) => {
       let el = e.target.parentElement;
       el.parentElement.removeChild(el);
+    }
+
+    var highlightCommand = (e) => {
+      //elCommand is the command of the list clicked.
+      let elCommand = e.target.parentElement;
+      let elSelected = document.querySelector(".sel-el.selected");
+      if(elSelected){
+        elSelected.classList.remove("selected");
+      }
+      if(elCommand != elSelected)
+        elCommand.classList.add("selected");
+    }
+
+    var addCommandToList = (newCommand) =>{
+      let selectedCommand = document.querySelector(".sel-el.selected");
+      if(selectedCommand){
+        selectedCommand.parentNode.insertBefore(newCommand, selectedCommand.nextSibling);
+      }else{
+        listCommands.appendChild(newCommand);
+      }
     }
 
     var addLockScreen = () => {
@@ -205,7 +227,6 @@
           let newCommand = document.createElement("li");
           newCommand.classList.add("sel-el");
           newCommand.dataset.cmdType = obj.content[i].cmdType;
-          newCommand.addEventListener("click", removeCommandEl);
           switch(newCommand.dataset.cmdType){
             case 'check':
               newCommand.innerHTML = `<div class="sel-text">${obj.content[i].pos[0]},${obj.content[i].pos[1]},${obj.content[i].pos[2]}</div><div class="remove-el"></div>`;
@@ -221,6 +242,8 @@
               newCommand.innerHTML = `<div class="sel-text">${obj.content[i].clickType}click (${obj.content[i].pos[0]}, ${obj.content[i].pos[1]}) </div><div class="remove-el"></div>`;
               break;
           }
+          newCommand.addEventListener("click", highlightCommand);
+          newCommand.children[1].addEventListener("click", removeCommandEl);
           listCommands.appendChild(newCommand);
         }
       });
@@ -398,7 +421,7 @@
             newCommand.dataset.value = input.value;
             newCommand.addEventListener("click", removeCommandEl);
             newCommand.innerHTML = `<div class="sel-text">Sleep for ${input.value/1000}s</div><div class="remove-el"></div>`;
-            listCommands.appendChild(newCommand);
+            addCommandToList(newCommand);
             removeLockScreen();
           }
         });
@@ -433,7 +456,7 @@
                   newCommand.dataset.posy= res.y;
                   newCommand.addEventListener("click", removeCommandEl);
                   newCommand.innerHTML = `<div class="sel-text">leftclick (${res.x}, ${res.y})</div><div class="remove-el"></div>`;
-                  listCommands.appendChild(newCommand);
+                  addCommandToList(newCommand);
                   removeLockScreen();
                 });
               });
@@ -452,7 +475,7 @@
                   newCommand.dataset.posy= res.y;
                   newCommand.addEventListener("click", removeCommandEl);
                   newCommand.innerHTML = `<div class="sel-text">rightclick (${res.x}, ${res.y})</div><div class="remove-el"></div>`;
-                  listCommands.appendChild(newCommand);
+                  addCommandToList(newCommand);
                   removeLockScreen();
                 });
               });
