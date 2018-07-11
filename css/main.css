@@ -353,6 +353,10 @@ ul {
   transition: font-size 0.3s ease, background-color 0.3s ease;
 }
 
+.sel-el.selected{
+  background: red;
+}
+
 .sel-el:hover {
   background: #d2cdcd;
   color: red;
