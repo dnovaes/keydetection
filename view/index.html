@@ -379,7 +379,18 @@
         //focus window and run the cave with the loaded file
         focuscc.focusWindow(function(res){
           bl.runProfile(obj, function(res){
-            console.log("Profile finished.\n");
+            if(res.hasOwnProperty("cmdPos")){
+              console.log(`[INDEX.html] runnning command number: ${res.cmdPos}\n`);
+              let listCommandsProfile = document.querySelectorAll(".list-commands .sel-el")
+
+              let elRunningPrev = document.querySelector(".sel-el.running");
+              if(elRunningPrev){
+                elRunningPrev.classList.remove("running");
+              }
+
+              let elRunningNow = listCommandsProfile[res.cmdPos];
+              elRunningNow.classList.add("running");
+            }
           });
         });
 
@@ -452,10 +463,14 @@
                   newCommand.classList.add("sel-el");
                   newCommand.dataset.cmdType = "mouseclick";
                   newCommand.dataset.clickType= "left";
-                  newCommand.dataset.posx= res.x;
-                  newCommand.dataset.posy= res.y;
+                  let posX = (res.x-center.x)/sqm.length;
+                  posX = Math.round(posX);
+                  let posY = (res.y-center.y)/sqm.height;
+                  posY = Math.round(posY);
+                  newCommand.dataset.posx= posX;
+                  newCommand.dataset.posy= posY;
                   newCommand.addEventListener("click", removeCommandEl);
-                  newCommand.innerHTML = `<div class="sel-text">leftclick (${res.x}, ${res.y})</div><div class="remove-el"></div>`;
+                  newCommand.innerHTML = `<div class="sel-text">leftclick (${posX}, ${posY})</div><div class="remove-el"></div>`;
                   addCommandToList(newCommand);
                   removeLockScreen();
                 });

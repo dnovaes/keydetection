@@ -357,6 +357,10 @@ ul {
   background: red;
 }
 
+.sel-el.running{
+  background: linear-gradient(rgb(214, 147, 153), rgb(68, 224, 17));
+}
+
 .sel-el:hover {
   background: #d2cdcd;
   color: red;
