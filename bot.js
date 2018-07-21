@@ -61,15 +61,15 @@ bl.getBattleList(function(res){
 
   if(res.fAction == 2){
     switch(res.type){
-      case 72:
+      case 152:
         res.type = "NPC";
         break;
       case 7: //myself
-      case 56:
+      case 88:
         res.type = "PLAYER";
         break;
       //case 112:
-      case 76:
+      case 108:
         res.type = "POKEMON";
         if((battlePokelist[res.addr] === 0)||(battlePokelist[res.addr] === undefined)){
           for(i=0;i<searchPokeArr.length;i++){
