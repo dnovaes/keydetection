@@ -105,6 +105,7 @@ struct WorkProfile{
   ContentProfile *profile;
   uv_work_t request;
   uv_async_t async;
+  int cmdPos;
   //stores the javascript callback function, persistent means: store in the heap
   Persistent<Function> callback;
 };
@@ -1611,6 +1612,7 @@ void getPlayerPosAsync(const FunctionCallbackInfo<Value>& args){
 
 static void runProfile(uv_work_t *req){
   WorkProfile *work = static_cast<WorkProfile*>(req->data);
+  work->async.data = (void*) req;
   /*
   int i=0;
   while(i<100){
@@ -1649,6 +1651,8 @@ static void runProfile(uv_work_t *req){
       }
       //printf("    {cmdType: '%s', ", cProfile->commands[i].cmdType);
       printf("\n\nRunning command %d\n", i);
+      work->cmdPos = i;
+      uv_async_send(&work->async);
 
       if(strcmp(cProfile->commands[i].cmdType, "sleep") == 0){ 
         //Sleep Function
@@ -1753,7 +1757,7 @@ static void runProfile(uv_work_t *req){
 
         SendInput(2, input2, sizeof(INPUT));
 
-        SetCursorPos(cProfile->commands[i].pos[0], cProfile->commands[i].pos[1]);
+        SetCursorPos(center.x+sqm.x*cProfile->commands[i].pos[0], center.y+sqm.y*cProfile->commands[i].pos[1]);
 
         Sleep(500);
         
@@ -1792,6 +1796,20 @@ static void runProfileComplete(uv_work_t *req, int status){
   //Free up the persistent function callback
   work->callback.Reset();
   delete work;
+}
+void sendSygnalProfile(uv_async_t *handle) {
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+
+  uv_work_t *req = ((uv_work_t*) handle->data);
+  WorkProfile *work = static_cast<WorkProfile*> (req->data);
+
+  Local<Object> obj = Object::New(isolate);
+  obj->Set(String::NewFromUtf8(isolate, "cmdPos"), Number::New(isolate, work->cmdPos));
+
+  Handle<Value> argv[] = {obj};
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
 }
 void runProfileAsync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
@@ -1886,6 +1904,7 @@ void runProfileAsync(const FunctionCallbackInfo<Value>& args){
   work->callback.Reset(isolate, callback);
 
   //worker thread using libuv
+  uv_async_init(uv_default_loop(), &work->async, sendSygnalProfile);
   uv_queue_work(uv_default_loop(), &work->request, runProfile, runProfileComplete);
   args.GetReturnValue().Set(Undefined(isolate));
 }
