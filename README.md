@@ -12,7 +12,13 @@ App Requisites:
 # Installation
 
 Install nodejs from the official website (6.11+, with npm of course)
-Install as global: node-gyp, windows-build-tools for python2.7 and Microsoft Visual C++ DevLib using the command bellow. Don't forget to execute CLI of the windows as admninistrator power. Do not use git bash or other unix substitute for windows to run this.
+Install it as global access: node-gyp, windows-build-tools for python2.7 and Microsoft Visual C++ DevLib using the command bellow. 
+
+- Do not forget to execute CLI of the windows with admininistrator rights. 
+- Do not use git bash or other unix substitute for windows to run the commands below (Windows).
+
+> Node packages usually depend on packages with native code, so you have to install Visual Studio.
+> Node-gyp is a wrapper around Python GYP (Generate Your Projects), a tool that can generate project files for Gcc, XCode, and Visual Studio. Since the de facto method of Windows development is via Visual Studio, that's the supported one.
 
 ```
 npm install -g node-gyp
@@ -28,7 +34,8 @@ You can check if python is already added in path by typing:
 echo $PATH
 ```
 
-If not... stay a while and listen :]. The enviroment path variables at windows stays at the global variable "PATH". To add python variable to path, check first where is your python2.7 path, go to control painel of your windows and add the path at the end of PATH variable as the picture below shows.
+If not... stay a while and listen :]
+The enviroment path variables at windows stays at the global variable "PATH". To add python variable to path, check first where is your python2.7 path, go to control painel of your windows and add the path at the end of PATH variable as the picture below shows.
 
 ![python27-path](https://i.imgur.com/gaVdnMA.png)
 
