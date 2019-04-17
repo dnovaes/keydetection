@@ -4,10 +4,10 @@
   "description": "A companion for your PXG",
   "main": "index.js",
   "dependencies": {
-    "async-lock": "^1.0.0"
+    "async-lock": "^1.2.0"
   },
   "devDependencies": {
-    "electron": "^1.8.8",
+    "electron": "^4.1.4",
     "electron-rebuild": "^1.8.4"
   },
   "scripts": {
@@ -19,8 +19,7 @@
     "url": "git+https://github.com/dnovaes/keydetection.git"
   },
   "keywords": [
-    "bot",
-    "pxg"
+    "bot"
   ],
   "author": "dnovaes",
   "license": "CCO-1.0",
