@@ -9,10 +9,6 @@
       "sources": [ "sourcecc/mouse.cc" ]
     },
     {
-      "target_name": "sharex",
-      "sources": [ "sourcecc/window.cc" ]
-    },
-    {
       "target_name": "focus",
       "sources": [ "sourcecc/focus.cc" ]
     },
