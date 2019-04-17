@@ -40,6 +40,20 @@ struct Coords{
   int x,y,z;
 };
 
+typedef struct listInt{
+  int value;
+  struct listInt *next;
+}cel;
+
+struct WorkHk{
+  //pointer when starting worker threads
+  uv_work_t request;
+  uv_async_t async;
+  //stores the javascript callback function, persistent means: store in the heap
+  Persistent<Function> callback;
+  int keyCode;
+};
+
 struct WorkPos{
   //pointer when starting worker threads
   uv_work_t request;
@@ -110,6 +124,13 @@ struct WorkProfile{
   Persistent<Function> callback;
 };
 
+struct NodeCreature{
+  DWORD_PTR addr;
+  DWORD_PTR *prev;
+  DWORD_PTR *next;
+  char name[8];
+};
+
 //global var
 char mutex = 1; //1 = continue
 uv_rwlock_t numlock;
@@ -121,20 +142,26 @@ DWORD dwThreadID;
 DWORD_PTR moduleAddr;
 POINT center, sqm;
 HANDLE hThread;
-RECT pxgCoords;
-int m1 = 0;
-int m2 = 0;
-int m3 = 0;
-int m4 = 0;
+HWND g_hwndGame;
+RECT pxgClientCoords;
 int SCREEN_X = 0;
 int SCREEN_Y = 0;
+int g_gamePosX = 0;
+int g_gamePosY = 0;
+int g_gameWidth = 0;
+int g_gameHeight = 0;
+POINT pkmSlot;
 
 //C function declaration
 Coords getPlayerPosC();
 DWORD GetProcessThreadID(DWORD pID);
 DWORD_PTR dwGetModuleBaseAddress(DWORD pid, TCHAR *szModuleName);
 void printThreads(DWORD pid);
-int DNcheckCurrPkmLife();
+int DNcheckCurrPkmLife(int fElixirHeal);
+void pause();
+void swapPokemon();
+void revivePokemon();
+void dragItemtoBellow();
 
 //const
 
@@ -142,7 +169,24 @@ int DNcheckCurrPkmLife();
 //global allocations (with AOB injection)
 const DWORD_PTR BASEADDR_CREATURE_GENERATOR = 0x047C0000; //_creatureBase
 //code cave with fixed address of the game
-const DWORD_PTR BASEADDR_CREATURE_GEN       = 0x00719001;
+const DWORD_PTR BASEADDR_CREATURE_GEN       = 0x00719001; //space in memory to copy and reference _creatureBase
+const DWORD_PTR BASEADDR_CREATURE_COUNTER   = 0x00719005;
+// base address pkm disappear from window
+const DWORD_PTR BASEADDR_DISAPPEAR          = 0x00719021;
+const DWORD_PTR BASEADDR_DISAPPEAR_POSX     = 0x00719025;
+const DWORD_PTR BASEADDR_DISAPPEAR_POSY     = 0x00719029;
+const DWORD_PTR OFFSET_DISAPPEAR_LIFE       = 0x38;
+//wanted wild pokemon (Cyber)
+const DWORD_PTR BASEADDR_WANTED             = 0x0071902D;
+const DWORD_PTR BASEADDR_WANTED_POSX        = 0x00719031;
+const DWORD_PTR BASEADDR_WANTED_POSY        = 0x00719035;
+const DWORD_PTR OFFSET_WANTED_LIFE          = 0x38;
+//Player's pokemon position
+const DWORD_PTR BASEADDR_PLAYER_PKM         = 0x007190C2;
+const DWORD_PTR BASEADDR_PLAYER_PKM_POSX    = 0x007190C2+0x4;
+const DWORD_PTR BASEADDR_PLAYER_PKM_POSY    = 0x007190C2+0x8;
+const DWORD_PTR BASEADDR_PLAYER_PKM_NAME    = 0x007190C2+0x12;
+
 //adress for position change (writes into pokemon pos. when something moves in screen)
 //const DWORD_PTR INSTR_POSADDR               = 0x1461A4; 
 //use moduleAddress as base (4 bytes)
@@ -156,6 +200,7 @@ const DWORD_PTR OFFSET_PKM_POSX             = 0xC;
 const DWORD_PTR OFFSET_PKM_POSY             = 0x10;
 const DWORD_PTR OFFSET_PKM_POSZ             = 0x14;
 const DWORD_PTR OFFSET_PKM_LIFE             = 0x38;
+const DWORD_PTR OFFSET_ENT_DIRECTION        = 0x3C;
 const DWORD_PTR OFFSET_PKM_LOOKTYPE         = 0x1C;
 //Addresses to current PKM life in slot (DOUBLE)
 const DWORD_PTR BASEADDR_CURR_PKM_LIFE      = 0x00393320;
@@ -165,8 +210,8 @@ const DWORD_PTR BASEADDR_BLACOUNT           = 0x0038E820;
 const DWORD_PTR OFFSET_BLCOUNT_P1           = 0x33C;
 const DWORD_PTR OFFSET_BLCOUNT_P2           = 0xA4;
 const DWORD_PTR OFFSET_BLCOUNT_P3           = 0x30;
-//pointer to fishing status address
-const DWORD_PTR BASEADDR_FISHING            = 0x0038E83C;
+//pointer to fishing status address (byte)
+const DWORD_PTR BASEADDR_FISHING            = 0x0039283C;
 const DWORD_PTR OFFSET_FISHING_P1           = 0x54;
 const DWORD_PTR OFFSET_FISHING_P2           = 0x4;
 //pointer to player's pokemon summoned status address
@@ -182,6 +227,18 @@ const DWORD_PTR OFFSET_MOVESET_P2 = 0x0;
 const DWORD_PTR OFFSET_MOVESET_P3 = 0x0;
 const DWORD_PTR OFFSET_MOVESET_X  = 0x0;
 const DWORD_PTR OFFSET_MOVESET_Y  = 0x0;
+//Logged in status
+const DWORD_PTR BASEADDR_LOGGEDIN = 0x00393360;
+//Game Window
+const DWORD_PTR BASEADDR_GAMESCREEN = 0x0031900B;
+const DWORD_PTR BASEADDR_GAMESCREEN_HEIGHT = 0x00319007;
+const DWORD_PTR OFFSET_GAMESCREEN_HEIGHT_WIDTH = 0x4;
+const DWORD_PTR OFFSET_GAMESCREEN_X= 0x0;
+const DWORD_PTR OFFSET_GAMESCREEN_Y= 0x4;
+//Summon status
+const DWORD_PTR BASEADDR_SUMMONSTATUS = 0x0031900F; //byte 0/1
+//Address containing adress of selected creature (target)
+const DWORD_PTR BASEADDR_TARGET_SELECT = 0x393324;
 
 DWORD_PTR dwGetModuleBaseAddress(DWORD pid, TCHAR *szModuleName)
 {
@@ -277,7 +334,7 @@ DWORD getProcessId(char *clientName){
 }
 
 //main function
-static void printBattleList(uv_work_t *req){
+static void getCreatureAddrSummoned(uv_work_t *req){
 
   Work *work = static_cast<Work*>(req->data);
   HINSTANCE module = GetModuleHandle(NULL);
@@ -285,6 +342,7 @@ static void printBattleList(uv_work_t *req){
 
   pid = 0;
   pid = getProcessId("pxgclient_dx9.exe");
+  printf("PID of the pxgclient=%d\n", pid);
 
   //When program gets SIGINT, it will trigger the function signal_callback_handler to execute
   // SIGINT = CTRL+C
@@ -307,7 +365,7 @@ static void printBattleList(uv_work_t *req){
   //printf("ModuleAddress value (Entry Point): 0x%X\n", value);
 
   ReadProcessMemory(handle, (LPVOID)(moduleAddr), &value, sizeof(DWORD), NULL);
-  printf("ModuleAddress value: 0x%X\n", value);
+  printf("ModuleAddress value: 0x%X\n", (DWORD)value);
 
   CloseHandle(handle); //close handle of process
 
@@ -327,34 +385,42 @@ static void printBattleList(uv_work_t *req){
     printf("mutex %d ", mutex);
   }
 
-  HANDLE handlep = OpenProcess(PROCESS_VM_READ, FALSE, pid);
-  /*char entityName[16];
-  byte entityType, entityNumLetters;
-  byte entityLookType;*/
-  byte entityNumberBl, oldEntityNumberBl = 0x0;
+  HANDLE handlep = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, FALSE, pid);
+  if(handlep == INVALID_HANDLE_VALUE){
+    printf("Failed to open PID %d, error code: %d\n", pid, GetLastError());
+  }else{
+    printf("handlep value: %p\n", handlep);
+  }
 
-  DWORD_PTR entityAddr;//a just spawed pokemon, npc or player
+  DWORD_PTR entityAddr, lastEntityAddr;//a just spawed creature
+  DWORD_PTR entityCounter, tempCounter;//a just spawed creature
+  char entityName[12];
 
-  printf("iniciando deteccao de pokemons\n");
+  tempCounter = 0;
+  lastEntityAddr = 0;
+
+  printf("iniciando deteccao de criaturas (npc, pokemon, player)\n");
   do{
+    //BASEADDR_CREATURE_GEN = creature name
+    //ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x1C), &entityNumberBl, 1, NULL);
+    ReadProcessMemory(handlep, (LPDWORD)(BASEADDR_CREATURE_COUNTER), &entityCounter, 4, NULL);
 
-    ReadProcessMemory(handlep, (LPDWORD)(BASEADDR_CREATURE_GEN), &entityAddr, 4, NULL);
-    entityAddr = entityAddr-0x28;
-    ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x1C), &entityNumberBl, 1, NULL);
-    /*
-    ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x24), &entityNumLetters, 1, NULL);
-    ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28), &entityName, 16, NULL);
-    ReadProcessMemory(handlep, (LPDWORD)(entityAddr), &entityType, 1, NULL);
-    ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28+OFFSET_PKM_LOOKTYPE), &entityLookType, 1, NULL);
-    entityName[entityNumLetters] = 0;
-    */
+    if(entityCounter != tempCounter){
+      ReadProcessMemory(handlep, (LPDWORD)(BASEADDR_CREATURE_GEN), &entityAddr, 4, NULL);
+      entityAddr = entityAddr-0x28;
+      ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28), &entityName, 12, NULL);
 
-    if(entityNumberBl != oldEntityNumberBl){
-      //printf("\nentityName: %s %d, Type: %d, creatureCounter: %d, Address: 0x%X \n", entityName, entityNumLetters, entityType, entityNumberBl, entityAddr);
-      oldEntityNumberBl = entityNumberBl;
+      while(lastEntityAddr == entityAddr){
+        ReadProcessMemory(handlep, (LPDWORD)(BASEADDR_CREATURE_GEN), &entityAddr, 4, NULL);
+        entityAddr = entityAddr-0x28;
+        ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28), &entityName, 12, NULL);
+      }
+      printf("\n creatureName: %s, creatureCounter: %d, Address: 0x%X \n", entityName, (int)entityCounter, (DWORD)entityAddr);
+      tempCounter = entityCounter;
+      lastEntityAddr = entityAddr+0x28;
 
       work->creatureAddr = entityAddr;
-      work->fAction =2;
+      work->fAction = 2;
 
       uv_async_send(&work->async);
 
@@ -603,6 +669,7 @@ void printThreads(DWORD pid){
 void sendSygnalCreatureAddr(uv_async_t *handle) {
   uv_rwlock_rdlock(&numlock);
   mutex = 0;
+  HANDLE handlec;
 
   //printf("uv_asvync_t start\n");
   uv_work_t *req = ((uv_work_t*) handle->data);
@@ -610,35 +677,48 @@ void sendSygnalCreatureAddr(uv_async_t *handle) {
 
   Isolate* isolate = Isolate::GetCurrent();
   v8::HandleScope handleScope(isolate);
-/*
-const DWORD_PTR OFFSET_PKM_NAME_LENGTH   = 0x24; //byte
-const DWORD_PTR OFFSET_PKM_NAME   = 0x28; //text
-const DWORD_PTR OFFSET_PKM_POSX   = 0xC; //4bytes
-const DWORD_PTR OFFSET_PKM_POSY   = 0x10; //4bytes
-const DWORD_PTR OFFSET_PKM_POSZ   = 0x14; //byte
-const DWORD_PTR OFFSET_PKM_LIFE   = 0x38; //byte
-*/
+  /*
+  const DWORD_PTR OFFSET_PKM_NAME_LENGTH   = 0x24; //byte
+  const DWORD_PTR OFFSET_PKM_NAME   = 0x28; //text
+  const DWORD_PTR OFFSET_PKM_POSX   = 0xC; //4bytes
+  const DWORD_PTR OFFSET_PKM_POSY   = 0x10; //4bytes
+  const DWORD_PTR OFFSET_PKM_POSZ   = 0x14; //byte
+  const DWORD_PTR OFFSET_PKM_LIFE   = 0x38; //byte
+  */
 
   Local<Object> obj = Object::New(isolate);
 
   if(work->fAction == 2){
     DWORD_PTR entityAddr = work->creatureAddr;
-    char entityName[16];
-    byte entityType, entityNumberBl;
-    byte entityLookType;
+    DWORD_PTR entityCounterNumber;
+    char entityName[10];
+    byte entityType, entityLookType;
+//    int errorCode;
 
-    HANDLE handlep = OpenProcess(PROCESS_VM_READ, FALSE, pid);
-    ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28), &entityName, 16, NULL);
-    ReadProcessMemory(handlep, (LPDWORD)(entityAddr), &entityType, 1, NULL);
-    ReadProcessMemory(handlep, (LPDWORD)(entityName-0x0C), &entityNumberBl, 1, NULL);
-    ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28+OFFSET_PKM_LOOKTYPE), &entityLookType, 1, NULL);
-    CloseHandle(handlep); //close handle of process
+    handlec = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, FALSE, pid);
+    if(handlec == INVALID_HANDLE_VALUE){
+      printf("Failed to open PID %d, error code: %d\n", pid, GetLastError());
+    }else{
+      printf("handlec value: %p\n", handlec);
+    }
+
+    ReadProcessMemory(handlec, (LPDWORD)(entityAddr+0x28), &entityName, 10, NULL);
+    ReadProcessMemory(handlec, (LPDWORD)(entityAddr), &entityType, 1, NULL);
+/*
+printf("memory process (entityType): %d\n", ReadProcessMemory(handlec, (LPDWORD)(entityAddr), &entityType, 1, NULL));
+errorCode = GetLastError();
+printf("lastErrorCode: %d\n", errorCode);
+*/
+    ReadProcessMemory(handlec, (LPDWORD)(entityAddr+0x28+OFFSET_PKM_LOOKTYPE), &entityLookType, 1, NULL);
+    ReadProcessMemory(handlec, (LPDWORD)(BASEADDR_CREATURE_COUNTER), &entityCounterNumber, 4, NULL);
+//    printf("\nSendSygnalCreature:\n creatureName: %s, creatureCounter: %d, Address: 0x%X \n", entityName, entityCounterNumber, entityAddr);
+    CloseHandle(handlec); //close handle of process
 
     obj->Set(String::NewFromUtf8(isolate, "addr"), Number::New(isolate, entityAddr));
     obj->Set(String::NewFromUtf8(isolate, "name"), String::NewFromUtf8(isolate, entityName));
     obj->Set(String::NewFromUtf8(isolate, "type"), Number::New(isolate, entityType));
     obj->Set(String::NewFromUtf8(isolate, "lookType"), Number::New(isolate, entityLookType));
-    obj->Set(String::NewFromUtf8(isolate, "counterBl"), Number::New(isolate, entityNumberBl));
+    obj->Set(String::NewFromUtf8(isolate, "counterNumber"), Number::New(isolate, entityCounterNumber));
     obj->Set(String::NewFromUtf8(isolate, "fAction"), Number::New(isolate, 2));
 
   }else{
@@ -669,7 +749,8 @@ void printBattleListAsync(const FunctionCallbackInfo<Value>& args){
 
   //worker thread using libuv
   uv_async_init(uv_default_loop(), &work->async, sendSygnalCreatureAddr);
-  uv_queue_work(uv_default_loop(), &work->request, printBattleList, NULL);
+  //uv_queue_work(uv_default_loop(), &work->request, printBattleList, NULL);
+  uv_queue_work(uv_default_loop(), &work->request, getCreatureAddrSummoned, NULL);
 
   args.GetReturnValue().Set(Undefined(isolate));
 }
@@ -677,8 +758,8 @@ void printBattleListAsync(const FunctionCallbackInfo<Value>& args){
 void setScreenConfigSync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
 
-  Work* work = new Work();
-  work->request.data = work;
+  //Work* work = new Work();
+  //work->request.data = work;
 
   Local<Object> centerObj = args[0]->ToObject();
   Local<Value> x = centerObj->Get(String::NewFromUtf8(isolate, "x"));
@@ -693,8 +774,8 @@ void setScreenConfigSync(const FunctionCallbackInfo<Value>& args){
   sqm.y = y->Int32Value();
 
   //store the callback from JS in the work package to invoke later
-  Local<Function> callback = Local<Function>::Cast(args[2]);
-  work->callback.Reset(isolate, callback);
+  //Local<Function> callback = Local<Function>::Cast(args[2]);
+  //work->callback.Reset(isolate, callback);
 
   //worker thread using libuv
   //uv_queue_work(uv_default_loop(), &work->request, waitForDeath, waitForDeathComplete);
@@ -703,15 +784,59 @@ void setScreenConfigSync(const FunctionCallbackInfo<Value>& args){
   args.GetReturnValue().Set(val);
 }
 
+//register hotkey for swapPokemon
+static void registerHkDragBox(uv_work_t *req){
+
+  WorkHk *work = static_cast<WorkHk*>(req->data);
+
+  //fill the global var screen resolution
+  SCREEN_X = GetSystemMetrics(SM_CXSCREEN);
+  SCREEN_Y = GetSystemMetrics(SM_CYSCREEN);
+
+  if(RegisterHotKey(NULL, 1, NULL, work->keyCode)){
+    MSG msg = {0};
+
+    while (GetMessage(&msg, NULL, 0, 0) != 0 ){
+      if(msg.message == WM_HOTKEY){
+        //UnregisterHotKey(NULL, 1);
+
+        dragItemtoBellow();
+        //Communication between threads(uv_work_t and uv_async_t);
+        work->async.data = (void*) req;
+        //uv_async_send(&work->async);
+      }
+    }
+  }
+}
+void registerHkDragBoxAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  WorkHk* work = new WorkHk();
+  work->request.data = work;
+
+  work->keyCode = args[0]->Int32Value();
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[1]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  //uv_async_init(uv_default_loop(), &work->async, sendSygnalHkDragBox);
+  uv_queue_work(uv_default_loop(), &work->request, registerHkDragBox, NULL);
+
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
 //register hotkey f10 while worker thread is running asynchronically
 static void registerHKF10(uv_work_t *req){
 
   Work *work = static_cast<Work*>(req->data);
 
-  if(RegisterHotKey(NULL, 1, NULL, 0x79)){
+  // 0x79 121 (F10)
+  // 0xBB 187 (=)
+  if(RegisterHotKey(NULL, 1, NULL, 0xBB)){
     MSG msg = {0};
 
-    printf("Running as PID=%d\n",getpid());
+    printf("This app is Running as PID=%d\n",getpid());
 
     while (GetMessage(&msg, NULL, 0, 0) != 0 ){
       if(msg.message == WM_HOTKEY){
@@ -810,6 +935,11 @@ static void fish(uv_work_t *req){
 
     Sleep(400); //wait for 'fish status' update
 
+    if(fPause){
+      printf("bot paused battlelist l-899\n");
+      pause();
+    }
+
     DWORD address;
 
     ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_FISHING), &address, sizeof(DWORD), NULL);
@@ -848,6 +978,8 @@ void fishAsync(const FunctionCallbackInfo<Value>& args){
   //store the callback from JS in the work package to invoke later
   Local<Function> callback = Local<Function>::Cast(args[0]);
   work->callback.Reset(isolate, callback);
+
+  fPause = FALSE;
 
   //worker thread using libuv
   uv_queue_work(uv_default_loop(), &work->request, fish, fishComplete);
@@ -984,131 +1116,6 @@ void attackPkmAsync(const FunctionCallbackInfo<Value>& args){
   args.GetReturnValue().Set(Undefined(isolate));
 }
 
-static void waitForDeath(uv_work_t *req){
-  Work *work = static_cast<Work*>(req->data);
-
-  HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
-  INPUT input;
-  char life;
-
-  do{
-    Sleep(800);
-    ReadProcessMemory(handle, (LPDWORD)(work->creatureAddr+OFFSET_PKM_LIFE), &life, 1, NULL);
-
-    if(m1){
-      // Set up a generic keyboard event.
-      input.type = INPUT_KEYBOARD;
-      input.ki.wScan = 0; // hardware scan code for key
-      input.ki.time = 0;
-      input.ki.dwExtraInfo = 0;
-
-      // Press the "F1" key
-      input.ki.wVk = VK_F1; // virtual-key code for the "F1" key
-      input.ki.dwFlags = 0; // 0 for key press
-      SendInput(1, &input, sizeof(INPUT));
-
-      Sleep(50);
-
-      input.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
-      SendInput(1, &input, sizeof(INPUT));
-
-      Sleep(50);
-    }
-    if(m2){
-      // Set up a generic keyboard event.
-      input.type = INPUT_KEYBOARD;
-      input.ki.wScan = 0; // hardware scan code for key
-      input.ki.time = 0;
-      input.ki.dwExtraInfo = 0;
-
-      input.ki.wVk = VK_F2; // virtual-key code for the "F2" key
-      input.ki.dwFlags = 0; // 0 for key press
-      SendInput(1, &input, sizeof(INPUT));
-
-      Sleep(50);
-
-      input.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
-      SendInput(1, &input, sizeof(INPUT));
-
-      Sleep(50);
-    }
-
-    if(m3){
-      // Set up a generic keyboard event.
-      input.type = INPUT_KEYBOARD;
-      input.ki.wScan = 0; // hardware scan code for key
-      input.ki.time = 0;
-      input.ki.dwExtraInfo = 0;
-
-      input.ki.wVk = VK_F3; // virtual-key code for the "F3" key
-      input.ki.dwFlags = 0; // 0 for key press
-      SendInput(1, &input, sizeof(INPUT));
-
-      Sleep(50);
-
-      input.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
-      SendInput(1, &input, sizeof(INPUT));
-
-      Sleep(50);
-    }
-
-    if(m4){
-      // Set up a generic keyboard event.
-      input.type = INPUT_KEYBOARD;
-      input.ki.wScan = 0; // hardware scan code for key
-      input.ki.time = 0;
-      input.ki.dwExtraInfo = 0;
-
-      input.ki.wVk = VK_F4; // virtual-key code for the "F4" key
-      input.ki.dwFlags = 0; // 0 for key press
-      SendInput(1, &input, sizeof(INPUT));
-
-      Sleep(50);
-
-      input.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
-      SendInput(1, &input, sizeof(INPUT));
-
-      Sleep(50);
-    }
-    //printf("pokemon currently life: %d\n", life);
-  }while(life > 0);
-
-  CloseHandle(handle);
-}
-
-static void waitForDeathComplete(uv_work_t *req, int status){
-  Isolate* isolate = Isolate::GetCurrent();
-  v8::HandleScope handleScope(isolate);
-  Work *work = static_cast<Work*>(req->data);
-
-  Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
-  //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
-
-  //Free up the persistent function callback
-  work->callback.Reset();
-  delete work;
-}
-
-void waitForDeathAsync(const FunctionCallbackInfo<Value>& args){
-  Isolate* isolate = args.GetIsolate();
-
-  Work* work = new Work();
-  work->request.data = work;
-
-  work->creatureAddr = args[0]->Int32Value();
-  //store the callback from JS in the work package to invoke later
-  Local<Function> callback = Local<Function>::Cast(args[1]);
-  work->callback.Reset(isolate, callback);
-
-  //worker thread using libuv
-  //attackPkmComplete here is a default funciton that returns 1 when complete. just reusing code
-  uv_queue_work(uv_default_loop(), &work->request, waitForDeath, waitForDeathComplete);
-
-  args.GetReturnValue().Set(Undefined(isolate));
-}
-
 static void isPkmNear(uv_work_t *req){
   WorkPkm *work = static_cast<WorkPkm*>(req->data);
 
@@ -1134,8 +1141,6 @@ static void isPkmNear(uv_work_t *req){
 static void isPkmNearComplete(uv_work_t *req, int status){
   Isolate* isolate = Isolate::GetCurrent();
   v8::HandleScope handleScope(isolate);
-
-//  printf("isPkmNearComplete calculations started\n");
 
   WorkPkm *work = static_cast<WorkPkm*>(req->data);
   int x, y;
@@ -1259,21 +1264,377 @@ void isPlayerPkmSummonedSync(const FunctionCallbackInfo<Value>& args){
   args.GetReturnValue().Set(obj);
 }
 
+void dragItemtoBellow(){
+  INPUT input, input2[2];
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+
+  //move mouse
+  input.type = INPUT_MOUSE;
+  input.mi.dx = (center.x+sqm.x)*65535/SCREEN_X;
+  input.mi.dy = center.y*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(50);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+  SendInput(2, input2, sizeof(INPUT));
+
+  Sleep(50);
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+  input.type = INPUT_MOUSE;
+  input.mi.time = 0;
+  input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(50);
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+  //move mouse
+  input.type = INPUT_MOUSE;
+  input.mi.dx = (center.x+sqm.x)*65535/SCREEN_X;
+  input.mi.dy = (center.y+sqm.y)*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(50);
+
+  ::ZeroMemory(&input, sizeof(INPUT)); input.type = INPUT_MOUSE; input.mi.time = 0;
+   input.mi.dwFlags  = MOUSEEVENTF_LEFTUP;
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(50);
+
+  //SetCursorPos(center.x+sqm.x*cProfile->commands[i].pos[0], center.y+sqm.y*cProfile->commands[i].pos[1]);
+}
+
+
+Coords getPlayerPkmPos(HANDLE handle){
+  Coords playerPkmPos;
+  DWORD_PTR baseaddr;
+
+  baseaddr=0;
+
+  do{
+    /*
+    LPDWORD is just a typedef for DWORD* and when a Windows SDK function parameter is a "LPsomething" 
+    you generally need to pass a pointer to a "something" (except for the LP[C][W]STR string types).
+    */
+    printf("\nLooking for the PLAYER'S POKEMON\n");
+    ReadProcessMemory(handle, (LPDWORD)(BASEADDR_PLAYER_PKM_POSX), &baseaddr, 4, NULL);
+    printf("player's pokemon address: %02X\n", baseaddr);
+
+    if(ReadProcessMemory(handle, (LPDWORD)(baseaddr), &playerPkmPos.x, 4, NULL)){
+      printf("playerPkmPos.x: %d\n", playerPkmPos.x);
+    }else{
+      printf("ReadProcessMemory Failed, error code: %d\n", GetLastError());
+      /*
+      299 (0x12B)
+      Only part of a ReadProcessMemory or WriteProcessMemory request was completed.
+      */
+    }
+
+    ReadProcessMemory(handle, (LPDWORD)(BASEADDR_PLAYER_PKM_POSY), &baseaddr, 4, NULL); 
+    ReadProcessMemory(handle, (LPDWORD)(baseaddr), &playerPkmPos.y, 4, NULL);
+  }while(playerPkmPos.x > 65534 || playerPkmPos.x <=0);
+
+  return playerPkmPos;
+}
+
+//Gets position of the gobal var BASEADDR_WANTED_POSX in ce
+Coords getTargetPkmPos(HANDLE handle){
+  Coords targetPkmPos;
+  DWORD_PTR baseaddr;
+
+  printf("handle inside function, value: %p\n", handle);
+  baseaddr = 0;
+
+  do{
+    printf("\nLooking for the wanted pokemon\n");
+    ReadProcessMemory(handle, (LPDWORD)(BASEADDR_WANTED_POSX), &baseaddr, 4, NULL);
+    printf("targetpkmpos address: %02X\n", baseaddr);
+
+    /*
+    LPDWORD is just a typedef for DWORD* and when a Windows SDK function parameter is a "LPsomething" 
+    you generally need to pass a pointer to a "something" (except for the LP[C][W]STR string types).
+    */
+
+    if(ReadProcessMemory(handle, (LPDWORD)(baseaddr), &targetPkmPos.x, 4, NULL)){
+      printf("targetPkmPos.x: %d\n", targetPkmPos.x);
+    }else{
+      printf("ReadProcessMemory Failed, error code: %d\n", GetLastError());
+      /*
+      299 (0x12B)
+      Only part of a ReadProcessMemory or WriteProcessMemory request was completed.
+      */
+    }
+
+    ReadProcessMemory(handle, (LPDWORD)(BASEADDR_WANTED_POSY), &baseaddr, 4, NULL); 
+    ReadProcessMemory(handle, (LPDWORD)(baseaddr), &targetPkmPos.y, 4, NULL);
+  }while(targetPkmPos.x > 65534 || targetPkmPos.x <=0);
+
+  return targetPkmPos;
+}
+
+void checkSummonPkm(HANDLE handle, int summonObjective){
+
+  //summonObjective
+  // 0 = Not Summoned
+  // 1 = Summoned
+
+  int pkmSummonStatus = 0;
+  INPUT input, input2[2];
+
+  //printf("\nHandle checksummonpkm: %d, %d\n", handle, &handle);
+  do{
+    ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_SUMMONSTATUS), &pkmSummonStatus, 1, NULL);
+    printf("\nsummonStatus: %d\n", pkmSummonStatus);
+
+    if(pkmSummonStatus != summonObjective){
+      ::ZeroMemory(&input, sizeof(INPUT));
+
+      //move mouse to pkmSlot position
+      input.type = INPUT_MOUSE;
+      input.mi.dx = pkmSlot.x*65535/SCREEN_X;
+      input.mi.dy = pkmSlot.y*65535/SCREEN_Y;
+      input.mi.time = 0;
+      input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+      SendInput(1, &input, sizeof(INPUT));
+
+      Sleep(50);
+
+      ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+      input2[0].type = INPUT_MOUSE;
+      input2[0].mi.time = 0;
+      input2[0].mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+
+      input2[1].type = INPUT_MOUSE;
+      input2[1].mi.time = 0;
+      input2[1].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+      SendInput(2, input2, sizeof(INPUT));
+    }
+
+    //sometimes sendInput takes some time to execute. This is a work arround to wait for the sendInput
+    Sleep(300);
+
+    if(fPause){
+      pause();
+    }
+
+  }while(pkmSummonStatus<1); 
+
+}
+
+void revivePokemon(){
+  INPUT input, input2[2];
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+
+  //move mouse to pkmSlot position
+  input.type = INPUT_MOUSE;
+  input.mi.dx = pkmSlot.x*65535/SCREEN_X;
+  input.mi.dy = pkmSlot.y*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(50);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+  SendInput(2, input2, sizeof(INPUT));
+
+  Sleep(50);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+  input2[0].type = INPUT_KEYBOARD;
+  input2[0].ki.wScan = 0; // hardware scan code for key
+  input2[0].ki.time = 0;
+  input2[0].ki.dwExtraInfo = 0;
+  // Press the "CTRL" key
+  input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+  input2[0].ki.dwFlags = 0; // 0 for key press
+
+  //use revive by Hotkey DEL 
+  input2[1].type = INPUT_KEYBOARD;
+  input2[1].ki.wScan = 0; // hardware scan code for key
+  input2[1].ki.time = 0;
+  input2[1].ki.dwExtraInfo = 0;
+  input2[1].ki.wVk = 0x2E; // virtual-key code for the "DEL" key
+  input2[1].ki.dwFlags = 0; // 0 for key press
+
+  SendInput(2, input2,sizeof(INPUT));
+
+  Sleep(200);
+
+  //Release of "CTRL" key
+  input2[0].type = INPUT_KEYBOARD;
+  input2[0].ki.wScan = 0; // hardware scan code for key
+  input2[0].ki.time = 0;
+  input2[0].ki.dwExtraInfo = 0;
+  input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+  input2[0].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+  //Release of "DEL" key
+  input2[1].type = INPUT_KEYBOARD;
+  input2[1].ki.wScan = 0; // hardware scan code for key
+  input2[1].ki.time = 0;
+  input2[1].ki.dwExtraInfo = 0;
+  input2[1].ki.wVk = 0x2E; // virtual-key code for the "DEL" key
+  input2[1].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+  SendInput(2, input2, sizeof(INPUT));
+
+  Sleep(50);
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+
+  //move mouse to pkmSlot position
+  input.type = INPUT_MOUSE;
+  input.mi.dx = pkmSlot.x*65535/SCREEN_X;
+  input.mi.dy = pkmSlot.y*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+ 
+  Sleep(50);
+  
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  //left click to use revive on pkm
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags  = MOUSEEVENTF_LEFTUP;
+
+  SendInput(2,input2,sizeof(INPUT));
+
+  Sleep(240);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+
+  SendInput(2, input2, sizeof(INPUT));
+}
+
+void swapPokemon(){
+  INPUT input, input2[2];
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+  //move mouse to pkmSlot position
+  input.type = INPUT_MOUSE;
+  input.mi.dx = pkmSlot.x*65535/SCREEN_X;
+  input.mi.dy = pkmSlot.y*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+ 
+  Sleep(50);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+  SendInput(2, input2, sizeof(INPUT));
+
+  Sleep(50);
+  
+  ::ZeroMemory(&input, sizeof(INPUT));
+  input.type = INPUT_MOUSE;
+  input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
+  input.mi.time = 0;
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(100);
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+  input.type = INPUT_MOUSE;
+  input.mi.dx = (pkmSlot.x+20)*65535/SCREEN_X;
+  input.mi.dy = pkmSlot.y*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(100);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_LEFTUP;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.dx = pkmSlot.x*65535/SCREEN_X;
+  input2[1].mi.dy = pkmSlot.y*65535/SCREEN_Y;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+
+  SendInput(2,input2,sizeof(INPUT));
+
+  Sleep(100);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+
+  SendInput(2, input2, sizeof(INPUT));
+}
+
 void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
 
   Work* work = new Work();
-  POINT pkmSlot;
   //POINT pkmSlot, reviveSlot;
   INPUT input, input2[2], input3[3];
 
+/*
   Local<Object> centerObj = args[0]->ToObject();
   Local<Value> x = centerObj->Get(String::NewFromUtf8(isolate, "x"));
   Local<Value> y = centerObj->Get(String::NewFromUtf8(isolate, "y"));
   pkmSlot.x = x->Int32Value();
   pkmSlot.y = y->Int32Value();
 
-/*
   Local<Object> sqmObj = args[1]->ToObject();
   x = sqmObj->Get(String::NewFromUtf8(isolate, "x"));
   y = sqmObj->Get(String::NewFromUtf8(isolate, "y"));
@@ -1458,8 +1819,9 @@ static void registerHkRevivePkm(uv_work_t *req){
         //UnregisterHotKey(NULL, 1);
 
         //Communication between threads(uv_work_t and uv_async_t);
-        work->async.data = (void*) req;
-        uv_async_send(&work->async);
+        //work->async.data = (void*) req;
+        revivePokemon();
+        //uv_async_send(&work->async);
       }
     }
   }
@@ -1493,7 +1855,150 @@ void registerHkRevivePkmAsync(const FunctionCallbackInfo<Value>& args){
   args.GetReturnValue().Set(Undefined(isolate));
 }
 
+//register hotkey for swapPokemon
+static void registerHkSwapPkm(uv_work_t *req){
+  WorkHk *work = static_cast<WorkHk*>(req->data);
 
+  //fill the global var screen resolution
+  SCREEN_X = GetSystemMetrics(SM_CXSCREEN);
+  SCREEN_Y = GetSystemMetrics(SM_CYSCREEN);
+
+  if(RegisterHotKey(NULL, 1, NULL, work->keyCode)){
+    MSG msg = {0};
+
+    //printf("Running as PID=%d\n",getpid());
+
+    while (GetMessage(&msg, NULL, 0, 0) != 0 ){
+      if(msg.message == WM_HOTKEY){
+        //UnregisterHotKey(NULL, 1);
+
+        swapPokemon();
+        //Communication between threads(uv_work_t and uv_async_t);
+        work->async.data = (void*) req;
+        //uv_async_send(&work->async);
+      }
+    }
+  }
+}
+void registerHkSwapPkmAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  WorkHk* work = new WorkHk();
+  work->request.data = work;
+
+  work->keyCode = args[0]->Int32Value();
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[1]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  //uv_async_init(uv_default_loop(), &work->async, sendSygnalHKSwapPkm);
+  uv_queue_work(uv_default_loop(), &work->request, registerHkSwapPkm, NULL);
+
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
+void PressHkMedicineLoop(){
+  INPUT input2[2];
+
+  while(!fPause){
+
+    ::ZeroMemory(input2, 2*sizeof(INPUT));
+    //use Medicine by Hotkey ENTER
+    input2[0].type = INPUT_KEYBOARD;
+    input2[0].ki.wScan = 0; // hardware scan code for key
+    input2[0].ki.time = 0;
+    input2[0].ki.dwExtraInfo = 0;
+    input2[0].ki.wVk = 0xD; // virtual-key code for the "ENTER" key
+    input2[0].ki.dwFlags = 0; // 0 for key press
+
+    input2[1].type = INPUT_KEYBOARD;
+    input2[1].ki.wScan = 0; // hardware scan code for key
+    input2[1].ki.time = 0;
+    input2[1].ki.dwExtraInfo = 0;
+    input2[1].ki.wVk = 0xD; // virtual-key code for the "ENTER" key
+    input2[1].ki.dwFlags = KEYEVENTF_KEYUP;
+
+    SendInput(2, input2, sizeof(INPUT));
+
+    Sleep(100);
+
+    ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+    input2[0].type = INPUT_MOUSE;
+    input2[0].mi.time = 0;
+    input2[0].mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
+
+    input2[1].type = INPUT_MOUSE;
+    input2[1].mi.time = 0;
+    input2[1].mi.dwFlags  = MOUSEEVENTF_LEFTUP;
+    SendInput(2, input2, sizeof(INPUT));
+
+    Sleep(300);
+  }
+}
+static void registerHkMedicineLoop(uv_work_t *req){
+  WorkHk *work = static_cast<WorkHk*>(req->data);
+
+  //fill the global var screen resolution
+  SCREEN_X = GetSystemMetrics(SM_CXSCREEN);
+  SCREEN_Y = GetSystemMetrics(SM_CYSCREEN);
+
+  if(RegisterHotKey(NULL, work->keyCode, NULL, work->keyCode)){
+    MSG msg = {0};
+
+    //printf("Running as PID=%d\n",getpid());
+
+    while (GetMessage(&msg, NULL, 0, 0) != 0 ){
+      if(msg.message == WM_HOTKEY){
+        //UnregisterHotKey(NULL, 1);
+
+        fPause = false;
+        PressHkMedicineLoop();
+        //Communication between threads(uv_work_t and uv_async_t);
+        //work->async.data = (void*) req;
+        //uv_async_send(&work->async);
+      }
+    }
+  }
+}
+void registerHkMedicineLoopAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  WorkHk* work = new WorkHk();
+  work->request.data = work;
+
+  work->keyCode = args[0]->Int32Value();
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[1]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  //uv_async_init(uv_default_loop(), &work->async, sendSygnalHKSwapPkm);
+  uv_queue_work(uv_default_loop(), &work->request, registerHkMedicineLoop, NULL);
+
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
+
+void registerPkmSlotSync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  Work* work = new Work();
+
+  Local<Object> centerObj = args[0]->ToObject();
+  Local<Value> x = centerObj->Get(String::NewFromUtf8(isolate, "x"));
+  Local<Value> y = centerObj->Get(String::NewFromUtf8(isolate, "y"));
+  pkmSlot.x = x->Int32Value();
+  pkmSlot.y = y->Int32Value();
+
+  Local<Number> val = Number::New(isolate, 1);
+  Handle<Value> argv[] = {val};
+
+  args.GetReturnValue().Set(val);
+}
+
+//player pos in the client/game (not in user pc screen coordinates)
 Coords getPlayerPosC(){
   Coords coords;
   pid = getProcessId("pxgclient_dx9.exe");
@@ -1510,6 +2015,121 @@ Coords getPlayerPosC(){
   return coords;
 }
 
+void  tossBallToPokemon(Coords targetPos, Coords playerPos){
+
+  //convert GamePos to ScreenPos
+  int sqmDiffX, sqmDiffY; 
+  POINT targetScreenPos;
+  INPUT input, input2[2];
+
+  sqmDiffX = targetPos.x - playerPos.x;
+  sqmDiffY = targetPos.y - playerPos.y;
+  printf("sqmDiff: %d, %d\n", sqmDiffX, sqmDiffY);
+  printf("center: %d, %d\n", center.x, center.y);
+
+  if(sqmDiffX>6){sqmDiffX = 6;}
+  if(sqmDiffY>4){sqmDiffX = 5;}
+
+  targetScreenPos.x = center.x + (sqmDiffX*(sqm.x));
+  targetScreenPos.y = center.y + (sqmDiffY*(sqm.y));
+
+  printf("capturing pokemon on pos: %d, %d (CurrentPos: %d, %d), (Tossing ball to pos: %d, %d)\n\n", targetScreenPos.x, targetScreenPos.y, playerPos.x, playerPos.y, targetPos.x, targetPos.y);
+
+  SetCursorPos(targetScreenPos.x, targetScreenPos.y);
+
+  Sleep(50);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+  input2[0].type = INPUT_KEYBOARD;
+  input2[0].ki.wScan = 0; // hardware scan code for key
+  input2[0].ki.time = 0;
+  input2[0].ki.dwExtraInfo = 0;
+  // Press the "CTRL" key
+  input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+  input2[0].ki.dwFlags = 0; // 0 for key press
+
+  //use revive by Hotkey F11
+  input2[1].type = INPUT_KEYBOARD;
+  input2[1].ki.wScan = 0; // hardware scan code for key
+  input2[1].ki.time = 0;
+  input2[1].ki.dwExtraInfo = 0;
+  input2[1].ki.wVk = 0x7A; // virtual-key code for the "F11" key
+  input2[1].ki.dwFlags = 0; // 0 for key press
+
+  SendInput(2, input2,sizeof(INPUT));
+
+  Sleep(200);
+
+  //Release of "CTRL" key
+  input2[0].type = INPUT_KEYBOARD;
+  input2[0].ki.wScan = 0; // hardware scan code for key
+  input2[0].ki.time = 0;
+  input2[0].ki.dwExtraInfo = 0;
+  input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+  input2[0].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+  //Release of "F11" key
+  input2[1].type = INPUT_KEYBOARD;
+  input2[1].ki.wScan = 0; // hardware scan code for key
+  input2[1].ki.time = 0;
+  input2[1].ki.dwExtraInfo = 0;
+  input2[1].ki.wVk = 0x7A; // virtual-key code for the "F11" key
+  input2[1].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+  SendInput(2, input2, sizeof(INPUT));
+
+  Sleep(50);
+  input.type      = INPUT_MOUSE;
+  input.mi.time = 0;
+  input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
+  SendInput(1,&input,sizeof(INPUT));
+
+  Sleep(50);
+
+  input.type      = INPUT_MOUSE;
+  input.mi.time = 0;
+  input.mi.dwFlags  = MOUSEEVENTF_LEFTUP;
+  SendInput(1,&input,sizeof(INPUT));
+
+  Sleep(40);
+}
+void sendRightClickToGamePos(Coords targetPos, Coords playerPos){
+  //convert GamePos to ScreenPos
+  int sqmDiffX, sqmDiffY; 
+  POINT targetScreenPos;
+  INPUT input;
+
+  sqmDiffX = targetPos.x - playerPos.x;
+  sqmDiffY = targetPos.y - playerPos.y;
+  printf("sqmDiff: %d, %d\n", sqmDiffX, sqmDiffY);
+  printf("center: %d, %d\n", center.x, center.y);
+
+  if(sqmDiffX>6){sqmDiffX = 6;}
+  if(sqmDiffY>4){sqmDiffX = 5;}
+
+  targetScreenPos.x = center.x + (sqmDiffX*(sqm.x));
+  targetScreenPos.y = center.y + (sqmDiffY*(sqm.y));
+
+  printf("Sending click to screenPos: %d, %d (CurrentPos: %d, %d), (Going to: %d, %d)\n\n", targetScreenPos.x, targetScreenPos.y, playerPos.x, playerPos.y, targetPos.x, targetPos.y);
+
+  SetCursorPos(targetScreenPos.x, targetScreenPos.y);
+
+  Sleep(50);
+
+  input.type      = INPUT_MOUSE;
+  input.mi.time = 0;
+  input.mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+  SendInput(1,&input,sizeof(INPUT));
+
+  Sleep(50);
+
+  input.type      = INPUT_MOUSE;
+  input.mi.time = 0;
+  input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+  SendInput(1,&input,sizeof(INPUT));
+
+  Sleep(40);
+}
 void sendClickToGamePos(Coords targetPos, Coords playerPos){
   //convert GamePos to ScreenPos
   int sqmDiffX, sqmDiffY; 
@@ -1518,8 +2138,11 @@ void sendClickToGamePos(Coords targetPos, Coords playerPos){
 
   sqmDiffX = targetPos.x - playerPos.x;
   sqmDiffY = targetPos.y - playerPos.y;
-  printf("sqmDiff: %d, %d ", sqmDiffX, sqmDiffY);
-  printf("center: %d, %d ", center.x, center.y);
+  printf("sqmDiff: %d, %d\n", sqmDiffX, sqmDiffY);
+  printf("center: %d, %d\n", center.x, center.y);
+
+  if(sqmDiffX>6){sqmDiffX = 6;}
+  if(sqmDiffY>4){sqmDiffX = 5;}
 
   targetScreenPos.x = center.x + (sqmDiffX*(sqm.x));
   targetScreenPos.y = center.y + (sqmDiffY*(sqm.y));
@@ -1547,12 +2170,14 @@ void sendClickToGamePos(Coords targetPos, Coords playerPos){
 
 void pause(){
   //bot will enter in pause mode if fPause is set to pause
+  printf("Bot Paused.\n");
   while(fPause){
-    printf("Bot Paused.\n");
-    Sleep(3000);
+    Sleep(1500);
   }
+  printf("Bot Resumed.\n");
 }
 
+//getPlayerPos return position of the player to the client (electron)
 static void getPlayerPos(uv_work_t *req){
   WorkPkm *work = static_cast<WorkPkm*>(req->data);
 
@@ -1613,18 +2238,7 @@ void getPlayerPosAsync(const FunctionCallbackInfo<Value>& args){
 static void runProfile(uv_work_t *req){
   WorkProfile *work = static_cast<WorkProfile*>(req->data);
   work->async.data = (void*) req;
-  /*
-  int i=0;
-  while(i<100){
-    if(fPause){
-      //printf("Bot Paused!!\n");
-    }else{
-      printf("Running Async\n");
-      i++;
-    }
-    Sleep(100);
-  }
-  */
+
   ContentProfile *cProfile = work->profile;
   int contentLength = cProfile->sizeCommandList;
   Coords playerPos, targetPos;
@@ -1632,12 +2246,10 @@ static void runProfile(uv_work_t *req){
   //reset fPause to unpaused before start this cavebot
   fPause = FALSE; //flag mark that indicates if bot is paused
   int fcheck = 0;
+  BYTE fLogged = 0;
 
-  DWORD baseCurrPkmLife;
-  DOUBLE currPkmLife, currPkmMaxLife;
-  int percent;
-  HANDLE handleLife;
   INPUT input2[2];
+  HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
 
   //printf("-> Reading file '%s'.json:\n", cProfile->fileName);
   //printf("{\n  fileName: '%s',\n  content:[\n", cProfile->fileName);
@@ -1649,14 +2261,12 @@ static void runProfile(uv_work_t *req){
       if(!fCaveBot){
         break;
       }
-      //printf("    {cmdType: '%s', ", cProfile->commands[i].cmdType);
       printf("\n\nRunning command %d\n", i);
       work->cmdPos = i;
       uv_async_send(&work->async);
 
-      if(strcmp(cProfile->commands[i].cmdType, "sleep") == 0){ 
+      if(strcmp(cProfile->commands[i].cmdType, "sleep") == 0){
         //Sleep Function
-        //printf("value: '%d'}\n", cProfile->commands[i].value);
         printf("Sleeping...%ds\n", cProfile->commands[i].value);
         Sleep(cProfile->commands[i].value);
 
@@ -1670,11 +2280,11 @@ static void runProfile(uv_work_t *req){
         ReadProcessMemory(handleLife, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE+0x8), &currPkmMaxLife, 8, NULL);
         percent = (currPkmLife/currPkmMaxLife)*100;
         printf("\ncurr pkm life: %d, MAX life: %d\n", (int)currPkmLife, (int)currPkmMaxLife);
-        printf("current pokemon percent: %d\n", percent);
+        printf("current pokemon life in percentual: %d \%\n", percent);
         printf("baseCurrPkmLife: 0x%X\n", baseCurrPkmLife);
         printf("baseCurrPkmLife+3C8: 0x%X\n", baseCurrPkmLife+OFFSET_CURR_PKM_LIFE);
         */
-        fcheck = DNcheckCurrPkmLife();
+        fcheck = DNcheckCurrPkmLife(0);
         playerPos = getPlayerPosC();
         printf("player position: %d, %d, %d\n", playerPos.x, playerPos.y, playerPos.z);
         if(
@@ -1687,7 +2297,7 @@ static void runProfile(uv_work_t *req){
           targetPos.y = cProfile->commands[i].pos[1];
         }else{
           printf("TargetPos: %d, %d\n", cProfile->commands[i].pos[0], cProfile->commands[i].pos[1]);
-          printf("too far away! [%d] Restarting Route. Pls to first position of the ROUTE\n", i);
+          printf("too far away! [%d] Restarting Route. Pls go to the first position of the ROUTE\n", i);
           i=-1;
           Sleep(5000);
         }
@@ -1698,11 +2308,16 @@ static void runProfile(uv_work_t *req){
           printf("ok im inside of the loop time to send click to game. ");
           printf("%d, %d\n", abs(playerPos.x - targetPos.x), abs(playerPos.y - targetPos.y));
           sendClickToGamePos(targetPos, playerPos);
-          Sleep(2000);
+
+          //Sleep between each "check" movement command
+          Sleep(1000);
+
           playerPos = getPlayerPosC();
+
           if(fPause){
             pause();
           }
+
           if(!fCaveBot){
             break;
           }
@@ -1729,12 +2344,12 @@ static void runProfile(uv_work_t *req){
         input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
         input2[0].ki.dwFlags = 0; // 0 for key press
 
-        //use revive by Hotkey DEL 
+        //Hotkey ]
         input2[1].type = INPUT_KEYBOARD;
         input2[1].ki.wScan = 0; // hardware scan code for key
         input2[1].ki.time = 0;
         input2[1].ki.dwExtraInfo = 0;
-        input2[1].ki.wVk = 0xDC; // virtual-key code for the "PAGE DOWN" key
+        input2[1].ki.wVk = 0xDC; // virtual-key code for the "]" key
         input2[1].ki.dwFlags = 0; // 0 for key press
 
         SendInput(2, input2,sizeof(INPUT));
@@ -1747,12 +2362,12 @@ static void runProfile(uv_work_t *req){
         input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
         input2[0].ki.dwFlags  = KEYEVENTF_KEYUP;
 
-        //Release of "DEL" key
+        //Release of "]" key
         input2[1].type = INPUT_KEYBOARD;
         input2[1].ki.wScan = 0; // hardware scan code for key
         input2[1].ki.time = 0;
         input2[1].ki.dwExtraInfo = 0;
-        input2[1].ki.wVk = 0xDC; // virtual-key code for the "PAGE DOWN" key
+        input2[1].ki.wVk = 0xDC; // virtual-key code for the "]" key
         input2[1].ki.dwFlags  = KEYEVENTF_KEYUP;
 
         SendInput(2, input2, sizeof(INPUT));
@@ -1775,10 +2390,130 @@ static void runProfile(uv_work_t *req){
         SendInput(2, input2, sizeof(INPUT));
 
         Sleep(500);
+      }else if(strcmp(cProfile->commands[i].cmdType, "hotkey") == 0){
+        //cProfile->commands[i].value contains the hotkey keyCode
+        
+        ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+        input2[0].type = INPUT_KEYBOARD;
+        input2[0].ki.wScan = 0; // hardware scan code for key
+        input2[0].ki.time = 0;
+        input2[0].ki.dwExtraInfo = 0;
+        input2[0].ki.wVk = cProfile->commands[i].value; //virtual keycode
+        input2[0].ki.dwFlags  = 0;
+
+        input2[1].type = INPUT_KEYBOARD;
+        input2[1].ki.wScan = 0; // hardware scan code for key
+        input2[1].ki.time = 0;
+        input2[1].ki.dwExtraInfo = 0;
+        input2[1].ki.wVk = cProfile->commands[i].value; //virtual keycode
+        input2[1].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+        SendInput(2, input2, sizeof(INPUT));
+
+        Sleep(700);
+      }else if(strcmp(cProfile->commands[i].cmdType, "login") == 0){
+        printf("Login\n");
+        //Confirm character and enters the game with "ENTER"
+        ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+        input2[0].type = INPUT_KEYBOARD;
+        input2[0].ki.wScan = 0; // hardware scan code for key
+        input2[0].ki.time = 0;
+        input2[0].ki.dwExtraInfo = 0;
+        input2[0].ki.wVk = 0xD; // virtual-key code for the "ENTER" key
+        input2[0].ki.dwFlags = 0; // 0 for key press
+
+        input2[1].type = INPUT_KEYBOARD;
+        input2[1].ki.wScan = 0; // hardware scan code for key
+        input2[1].ki.time = 0;
+        input2[1].ki.dwExtraInfo = 0;
+        input2[1].ki.wVk = 0xD; // virtual-key code for the "ENTER" key
+        input2[1].ki.dwFlags = KEYEVENTF_KEYUP;
+
+        SendInput(2, input2, sizeof(INPUT));
+
+        fLogged = 0;
+
+        ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_LOGGEDIN), &fLogged, 1, NULL);
+        while(!fLogged){
+          ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_LOGGEDIN), &fLogged, 1, NULL);
+          printf("Char loggado? => %d\n", fLogged);
+          Sleep(1500);
+        }
+
+      }else if(strcmp(cProfile->commands[i].cmdType, "logoff") == 0){
+        printf("Logout\n");
+        //Log out
+        ::ZeroMemory(input2, 2*sizeof(INPUT));
+        //Release of "CTRL" key
+        input2[0].type = INPUT_KEYBOARD;
+        input2[0].ki.wScan = 0; // hardware scan code for key
+        input2[0].ki.time = 0;
+        input2[0].ki.dwExtraInfo = 0;
+        input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+        input2[0].ki.dwFlags  = 0;
+
+        //Release of "q" key
+        input2[1].type = INPUT_KEYBOARD;
+        input2[1].ki.wScan = 0; // hardware scan code for key
+        input2[1].ki.time = 0;
+        input2[1].ki.dwExtraInfo = 0;
+        input2[1].ki.wVk = 0x51; // virtual-key code for the "q" key
+        input2[1].ki.dwFlags  = 0;
+
+        SendInput(2, input2, sizeof(INPUT));
+
+        Sleep(500);
+
+        //Release of "CTRL" key
+        input2[0].type = INPUT_KEYBOARD;
+        input2[0].ki.wScan = 0; // hardware scan code for key
+        input2[0].ki.time = 0;
+        input2[0].ki.dwExtraInfo = 0;
+        input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+        input2[0].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+        //Release of "q" key
+        input2[1].type = INPUT_KEYBOARD;
+        input2[1].ki.wScan = 0; // hardware scan code for key
+        input2[1].ki.time = 0;
+        input2[1].ki.dwExtraInfo = 0;
+        input2[1].ki.wVk = 0x51; // virtual-key code for the "q" key
+        input2[1].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+        SendInput(2, input2, sizeof(INPUT));
+
+        Sleep(500);
+
+        //Confirm act of logging out
+        input2[0].type = INPUT_KEYBOARD;
+        input2[0].ki.wScan = 0; // hardware scan code for key
+        input2[0].ki.time = 0;
+        input2[0].ki.dwExtraInfo = 0;
+        input2[0].ki.wVk = 0xD; // virtual-key code for the "ENTER" key
+        input2[0].ki.dwFlags = 0; // 0 for key press
+
+        input2[1].type = INPUT_KEYBOARD;
+        input2[1].ki.wScan = 0; // hardware scan code for key
+        input2[1].ki.time = 0;
+        input2[1].ki.dwExtraInfo = 0;
+        input2[1].ki.wVk = 0xD; // virtual-key code for the "ENTER" key
+        input2[1].ki.dwFlags = KEYEVENTF_KEYUP;
+
+        SendInput(2, input2, sizeof(INPUT));
+
+        //Average time to logout from computers... +-2 Seconds
+        Sleep(1500);
+      }else if(strcmp(cProfile->commands[i].cmdType, "summonPkm") == 0){
+        checkSummonPkm(handle, 1);
+      }else if(strcmp(cProfile->commands[i].cmdType, "backPkm") == 0){
+        checkSummonPkm(handle, 0);
       }
     }
   }
   //printf("  ]\n}\n");
+  CloseHandle(handle);
   printf("Profile finished Async\n");
 }
 static void runProfileComplete(uv_work_t *req, int status){
@@ -1895,6 +2630,9 @@ void runProfileAsync(const FunctionCallbackInfo<Value>& args){
       cProfile->commands[i].clickType = (char*)malloc(strlen(clickType.c_str())+1);
       strcpy(cProfile->commands[i].clickType, clickType.c_str());
 
+    }else if(strcmp(cProfile->commands[i].cmdType, "hotkey") == 0){
+      value = arrObj->Get(String::NewFromUtf8(isolate, "value"));
+      cProfile->commands[i].value = value->Int32Value();
     }
 
   }
@@ -1909,6 +2647,304 @@ void runProfileAsync(const FunctionCallbackInfo<Value>& args){
   args.GetReturnValue().Set(Undefined(isolate));
 }
 
+
+void sendSygnalCyber(uv_async_t *handle) {
+  uv_work_t *req = ((uv_work_t*) handle->data);
+  Work *work = static_cast<Work*> (req->data);
+
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+
+  Local<Object> obj = Object::New(isolate);
+
+  obj->Set(String::NewFromUtf8(isolate, "countdown"), Number::New(isolate, 1));
+
+  Handle<Value> argv[] = {obj};
+  //execute the callback
+  //takes some time to execute for the first time
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+}
+static void runCyberScriptComplete(uv_work_t *req, int status){
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+  Work *work = static_cast<Work*>(req->data);
+
+  //prepare error vars
+  Local<Number> val = Number::New(isolate, 1);
+  Handle<Value> argv[] = {val};
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
+  //Free up the persistent function callback
+  work->callback.Reset();
+  delete work;
+}
+static void runCyberScript(uv_work_t *req){
+  Work *work = static_cast<Work*>(req->data);
+  work->async.data = (void*) req;
+
+  BYTE fLogged = 0;
+  int i;
+  INPUT input, input2[2];
+  DWORD_PTR baseaddr;
+  Coords corpsePkmPos, targetPkmPos, playerPos, targetPos;
+  BYTE prevTargetPkmLife, curTargetPkmLife;
+  int hks[10]; //f1 - f10
+
+  //flag the shows condition of running a profile
+  //condition necessary to run some functions and being able to stop anytime by the client
+  fCaveBot = TRUE;
+
+  hks[0] = 112; //F1
+  for(i=1;i<=9;i++){
+    hks[i]=hks[i-1]+1;
+  }
+
+  //Confirm character and enters the game with "ENTER"
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  input2[0].type = INPUT_KEYBOARD;
+  input2[0].ki.wScan = 0; // hardware scan code for key
+  input2[0].ki.time = 0;
+  input2[0].ki.dwExtraInfo = 0;
+  input2[0].ki.wVk = 0xD; // virtual-key code for the "ENTER" key
+  input2[0].ki.dwFlags = 0; // 0 for key press
+
+  input2[1].type = INPUT_KEYBOARD;
+  input2[1].ki.wScan = 0; // hardware scan code for key
+  input2[1].ki.time = 0;
+  input2[1].ki.dwExtraInfo = 0;
+  input2[1].ki.wVk = 0xD; // virtual-key code for the "ENTER" key
+  input2[1].ki.dwFlags = KEYEVENTF_KEYUP;
+
+  SendInput(2, input2, sizeof(INPUT));
+
+  HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+
+  ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_LOGGEDIN), &fLogged, 1, NULL);
+  while(!fLogged){
+    ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_LOGGEDIN), &fLogged, 1, NULL);
+    printf("Char loggado? => %d\n", fLogged);
+    Sleep(1500);
+  }
+
+
+  //Check and Summon Pokemon
+  //init var summon status.  Obs: it has 300 sleep delay after finishing function
+  checkSummonPkm(handle, 1);
+
+  //Check and Target Pokemon
+  //get position of the wanted pokemon to make target
+  do{
+    printf("Trying to select the target pkm...\n");
+    targetPkmPos = getTargetPkmPos(handle);
+
+    printf("Pkm target found. Pos x: %d, y: %d\n", targetPkmPos.x, targetPkmPos.y);
+
+    playerPos = getPlayerPosC();
+    sendRightClickToGamePos(targetPkmPos, playerPos);
+
+    Sleep(150);
+
+    //check again if pkm is summoned
+    checkSummonPkm(handle, 1);
+
+    //check if target is selected
+    ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_TARGET_SELECT), &baseaddr, 4, NULL);
+  }while((baseaddr == 0)&&(fCaveBot));
+  printf("Target Pkm selected.\n");
+
+
+  //Use Pokemon Skills (F9>>F1)
+  i=9; //F10
+  prevTargetPkmLife = 0;
+  printf("Using skills\n");
+  do{
+    /*if(i==3){ //F4
+      i=2;  //skip F4 and goes to F3
+    }*/
+    //press from F9-F1 (except F4 for Shiny Rhydon)
+    input2[0].type = INPUT_KEYBOARD;
+    input2[0].ki.wScan = 0; // hardware scan code for key
+    input2[0].ki.time = 0;
+    input2[0].ki.dwExtraInfo = 0;
+    input2[0].ki.wVk = hks[i];
+    input2[0].ki.dwFlags = 0; // 0 for key press
+
+    input2[1].type = INPUT_KEYBOARD;
+    input2[1].ki.wScan = 0; // hardware scan code for key
+    input2[1].ki.time = 0;
+    input2[1].ki.dwExtraInfo = 0;
+    input2[1].ki.wVk = hks[i];
+    input2[1].ki.dwFlags = KEYEVENTF_KEYUP;
+    SendInput(2, input2, sizeof(INPUT));
+
+    Sleep(100);
+
+    input2[0].type = INPUT_KEYBOARD;
+    input2[0].ki.wScan = 0; // hardware scan code for key
+    input2[0].ki.time = 0;
+    input2[0].ki.dwExtraInfo = 0;
+    input2[0].ki.wVk = hks[i];
+    input2[0].ki.dwFlags = 0; // 0 for key press
+
+    input2[1].type = INPUT_KEYBOARD;
+    input2[1].ki.wScan = 0; // hardware scan code for key
+    input2[1].ki.time = 0;
+    input2[1].ki.dwExtraInfo = 0;
+    input2[1].ki.wVk = hks[i];
+    input2[1].ki.dwFlags = KEYEVENTF_KEYUP;
+    SendInput(2, input2, sizeof(INPUT));
+
+    i--;
+    if(i==-1){
+      i=9;
+    }
+
+    //Check if pokemon is alive, if so, repeat skills until wild pokemon get killed
+    ReadProcessMemory(handle, (LPDWORD)(BASEADDR_WANTED), &baseaddr, 4, NULL);
+    ReadProcessMemory(handle, (LPDWORD)(baseaddr+OFFSET_WANTED_LIFE), &curTargetPkmLife, 1, NULL);
+    printf("current target pkm life: %d\n", curTargetPkmLife);
+
+    if(curTargetPkmLife == prevTargetPkmLife){
+      //wait a little more before using next skill, maybe the oponnent is temporary invulnerable
+      Sleep(1000);
+    }
+    prevTargetPkmLife = curTargetPkmLife;
+
+    //Use Revive
+    //revivePokemon();
+
+    //use Heal Elixir
+    //check if player pokemon life is low, if so, uses elixir of healing
+    DNcheckCurrPkmLife(1);
+
+    //check again if pkm is summoned
+    checkSummonPkm(handle, 1);
+    Sleep(200);
+
+    if(fPause){
+      pause();
+    }
+  }while((curTargetPkmLife>0)&&(fCaveBot));
+
+  //target is dead, restart the countdown:
+  //send notification to the interface to restart the countdown
+  uv_async_send(&work->async);
+
+  //pull back pokemon into the pokeball
+  checkSummonPkm(handle, 0);
+
+  //Take loot of the wild Pokemon
+  ReadProcessMemory(handle, (LPDWORD)(BASEADDR_WANTED_POSX), &baseaddr, 4, NULL); 
+  ReadProcessMemory(handle, (LPDWORD)(baseaddr), &corpsePkmPos.x, 4, NULL);
+
+  ReadProcessMemory(handle, (LPDWORD)(BASEADDR_WANTED_POSY), &baseaddr, 4, NULL); 
+  ReadProcessMemory(handle, (LPDWORD)(baseaddr), &corpsePkmPos.y, 4, NULL);
+
+  printf("corpse pkm:  x %d, y %d\n", corpsePkmPos.x, corpsePkmPos.y);
+
+  playerPos = getPlayerPosC();
+  sendRightClickToGamePos(corpsePkmPos, playerPos);
+
+  Sleep(3000);
+
+  //Toss a ball on the wild pokemon
+  playerPos = getPlayerPosC();
+  tossBallToPokemon(corpsePkmPos, playerPos);
+
+  Sleep(500);
+
+  //Take pokemon out of the pokeball
+  checkSummonPkm(handle, 1);
+
+  //Move player back to certain position
+  playerPos = getPlayerPosC();
+  targetPos.x = 4289;
+  targetPos.y = 3615;
+  sendClickToGamePos(targetPos, playerPos); //leftclick
+  Sleep(3000);
+
+  //Wait for cooldown to restore
+  //Sleep(45000); //Togetic
+  Sleep(50000); //C.O
+
+
+  //Log out
+  //Release of "CTRL" key
+  input2[0].type = INPUT_KEYBOARD;
+  input2[0].ki.wScan = 0; // hardware scan code for key
+  input2[0].ki.time = 0;
+  input2[0].ki.dwExtraInfo = 0;
+  input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+  input2[0].ki.dwFlags  = 0;
+
+  //Release of "q" key
+  input2[1].type = INPUT_KEYBOARD;
+  input2[1].ki.wScan = 0; // hardware scan code for key
+  input2[1].ki.time = 0;
+  input2[1].ki.dwExtraInfo = 0;
+  input2[1].ki.wVk = 0x51; // virtual-key code for the "q" key
+  input2[1].ki.dwFlags  = 0;
+
+  SendInput(2, input2, sizeof(INPUT));
+
+  Sleep(500);
+
+  //Release of "CTRL" key
+  input2[0].type = INPUT_KEYBOARD;
+  input2[0].ki.wScan = 0; // hardware scan code for key
+  input2[0].ki.time = 0;
+  input2[0].ki.dwExtraInfo = 0;
+  input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+  input2[0].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+  //Release of "q" key
+  input2[1].type = INPUT_KEYBOARD;
+  input2[1].ki.wScan = 0; // hardware scan code for key
+  input2[1].ki.time = 0;
+  input2[1].ki.dwExtraInfo = 0;
+  input2[1].ki.wVk = 0x51; // virtual-key code for the "q" key
+  input2[1].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+  SendInput(2, input2, sizeof(INPUT));
+
+  Sleep(500);
+
+  //Confirm act of logging out
+  input2[0].type = INPUT_KEYBOARD;
+  input2[0].ki.wScan = 0; // hardware scan code for key
+  input2[0].ki.time = 0;
+  input2[0].ki.dwExtraInfo = 0;
+  input2[0].ki.wVk = 0xD; // virtual-key code for the "ENTER" key
+  input2[0].ki.dwFlags = 0; // 0 for key press
+
+  input2[1].type = INPUT_KEYBOARD;
+  input2[1].ki.wScan = 0; // hardware scan code for key
+  input2[1].ki.time = 0;
+  input2[1].ki.dwExtraInfo = 0;
+  input2[1].ki.wVk = 0xD; // virtual-key code for the "ENTER" key
+  input2[1].ki.dwFlags = KEYEVENTF_KEYUP;
+
+  SendInput(2, input2, sizeof(INPUT));
+
+  CloseHandle(handle);
+}
+void runCyberScriptAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  Work* work = new Work();
+  work->request.data = work;
+
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[0]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  uv_async_init(uv_default_loop(), &work->async, sendSygnalCyber);
+  uv_queue_work(uv_default_loop(), &work->request, runCyberScript, runCyberScriptComplete);
+  args.GetReturnValue().Set(Undefined(isolate));
+}
 
 //stop actual caveBot profile
 void stopProfileSync(const FunctionCallbackInfo<Value>& args){
@@ -1958,14 +2994,18 @@ void sendKey(const FunctionCallbackInfo<Value>& args){
 }
 
 //Decision Node
-int DNcheckCurrPkmLife(){
+int DNcheckCurrPkmLife(int fElixirHeal){
   DWORD baseCurrPkmLife;
   DOUBLE currPkmLife, currPkmMaxLife;
   int percent;
   HANDLE handleLife;
+  INPUT input2[2];
+  //Coords targetPkmPos;
+  Coords playerPos, playerPkmPos;
 
   handleLife = OpenProcess(PROCESS_VM_READ, FALSE, pid);
-  percent = (currPkmLife/currPkmMaxLife)*100;
+  currPkmLife = 0;
+  currPkmMaxLife = 0;
 
   if(handleLife != NULL){
     //printf("process openned successfully\n");
@@ -1975,7 +3015,7 @@ int DNcheckCurrPkmLife(){
     ReadProcessMemory(handleLife, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE+0x8), &currPkmMaxLife, 8, NULL);
 
     percent = (currPkmLife/currPkmMaxLife)*100;
-    printf("\ncurrent pokemon percent: %d\n\n", percent);
+    printf("\nplayer pokemon life percent: %d\n\n", percent);
 
     while((percent<40)&&(fCaveBot)){ 
       //Checking HP part
@@ -1983,14 +3023,79 @@ int DNcheckCurrPkmLife(){
       ReadProcessMemory(handleLife, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE+0x8), &currPkmMaxLife, 8, NULL);
 
       percent = (currPkmLife/currPkmMaxLife)*100;
-      printf("current pokemon percent: %d\n", percent);
+      printf("player pokemon life percent: %d\n", percent);
       /*printf("\ncurr pkm life: %d, MAX life: %d\n", (int)currPkmLife, (int)currPkmMaxLife);
       printf("baseCurrPkmLife: 0x%X\n", baseCurrPkmLife);
       printf("baseCurrPkmLife+3C8: 0x%X\n", baseCurrPkmLife+OFFSET_CURR_PKM_LIFE);*/
 
       //Heal part:
-      //wait for regen to heal or use potion
-      Sleep(5000);
+      if(fElixirHeal){
+        printf("Using Heal Elixir\n");
+
+        playerPos = getPlayerPosC();
+        //targetPkmPos = getTargetPkmPos(handleLife);
+        playerPkmPos = getPlayerPkmPos(handleLife);
+
+        printf("playerPos : %d, %d\n", playerPos.x, playerPos.y);
+        //printf("targetPkmPos: %d, %d\n", targetPkmPos.x, targetPkmPos.y);
+        printf("playerPkmPos : %d, %d\n", playerPkmPos.x, playerPkmPos.y);
+
+        ::ZeroMemory(input2, 2*sizeof(INPUT));
+        input2[0].type = INPUT_KEYBOARD;
+        input2[0].ki.wScan = 0; // hardware scan code for key
+        input2[0].ki.time = 0;
+        input2[0].ki.dwExtraInfo = 0;
+        // Press the "CTRL" key
+        input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+        input2[0].ki.dwFlags = 0; // 0 for key press
+
+        // Press the 'END' key
+        input2[1].type = INPUT_KEYBOARD;
+        input2[1].ki.wScan = 0; // hardware scan code for key
+        input2[1].ki.time = 0;
+        input2[1].ki.dwExtraInfo = 0;
+        input2[1].ki.wVk = 0xDD; // virtual-key code for the "[" key
+        input2[1].ki.dwFlags = 0; // 0 for key press
+
+        SendInput(2, input2,sizeof(INPUT));
+
+        Sleep(200);
+
+        //Release of "CTRL" key
+        input2[0].type = INPUT_KEYBOARD;
+        input2[0].ki.wScan = 0; // hardware scan code for key
+        input2[0].ki.time = 0;
+        input2[0].ki.dwExtraInfo = 0;
+        input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+        input2[0].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+        //Release of "END" key
+        input2[1].type = INPUT_KEYBOARD;
+        input2[1].ki.wScan = 0; // hardware scan code for key
+        input2[1].ki.time = 0;
+        input2[1].ki.dwExtraInfo = 0;
+        input2[1].ki.wVk = 0xDD; // virtual-key code for the "[" key
+        input2[1].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+        SendInput(2, input2, sizeof(INPUT));
+
+        Sleep(200);
+
+        //arguments: target, playerPos
+        sendClickToGamePos(playerPkmPos, playerPos); //leftclick
+
+        Sleep(200);
+
+      }else{
+        //wait for y-regeneration to heal the pokemon
+        Sleep(5000);
+      }
+
+      //In every loop command, must have this command in case of user wanting to puase the bot
+      //same applies to verification of fCaveBot (stopping the profile)
+      if(fPause){
+        pause();
+      }
     }
     CloseHandle(handleLife);
   }else{
@@ -1999,26 +3104,294 @@ int DNcheckCurrPkmLife(){
   return 1;
 }
 
-void testread(const FunctionCallbackInfo<Value>& args){
+void mapUnownMovementSync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
 
-  DWORD_PTR baseCurrPkmLife;
-  DOUBLE currPkmLife, currPkmMaxLife; //DOUBLE =  8 bytes = 32 bits(x86 architeture)
-  int percent;
+  Work* work = new Work();
+  DWORD unownAddress;
+  HANDLE handle;
 
-  HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
-  ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_CURR_PKM_LIFE), &baseCurrPkmLife, 4, NULL);
-  ReadProcessMemory(handle, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE), &currPkmLife, 8, NULL);
-  ReadProcessMemory(handle, (LPDWORD)(baseCurrPkmLife+OFFSET_CURR_PKM_LIFE+0x8), &currPkmMaxLife, 8, NULL);
-  CloseHandle(handle);
+  Local<Object> centerObj = args[0]->ToObject();
+  Local<Value> addr = centerObj->Get(String::NewFromUtf8(isolate, "address"));
+  unownAddress = addr->Int32Value();
+  //pkmSlot.x = x->Int32Value();
+  //pkmSlot.y = y->Int32Value();
+  printf("unownAddress: 0x%d\n", (int)unownAddress);
+  printf("unownAddress: 0x%X\n", unownAddress);
 
-  percent = (currPkmLife/currPkmMaxLife)*100;
+  handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
 
-  //printf("sizeof double: %lu, int: %lu, dword: %lu\n", sizeof(DOUBLE), sizeof(4), sizeof(DWORD));
-  printf("\ncurr pkm life: %d, MAX life: %d\n", (int)currPkmLife, (int)currPkmMaxLife);
-  printf("current pokemon percent: %d\n", percent);
-  printf("baseCurrPkmLife: 0x%X\n", baseCurrPkmLife);
-  printf("baseCurrPkmLife+3C8: 0x%X\n", baseCurrPkmLife+OFFSET_CURR_PKM_LIFE);
+  int i=0, oldPosy=0, newPosy;
+
+  while(i<25){ 
+    ReadProcessMemory(handle, (LPDWORD)(unownAddress+OFFSET_PKM_POSY), &newPosy, 4, NULL);
+    if(oldPosy==0){
+      oldPosy = newPosy;
+    }else if(oldPosy!=newPosy){
+      if(newPosy>oldPosy){
+        printf("newPosy: %d ", newPosy);
+        printf("Down\n");
+      }else{
+        printf("newPosy: %d ", newPosy);
+        printf("Up\n");
+      }
+      oldPosy = newPosy;
+      i++;
+    }
+    if(newPosy==65535){
+      //break
+      i=25;
+    }
+  }
+  printf("Unown trace finished.\n");
+
+  Local<Object> obj = Object::New(isolate);
+  obj->Set(String::NewFromUtf8(isolate, "pos"), Number::New(isolate, 8));
+  Handle<Value> argv[] = {obj};
+
+  args.GetReturnValue().Set(obj);
+
+  //local<number> val = number::new(isolate, 1);
+  //handle<value> argv[] = {val};
+  //args.GetReturnValue().Set(val);
+
+  /*
+  Local<Object> obj = Object::New(isolate);
+  obj->Set(String::NewFromUtf8(isolate, "fishStatus"), Number::New(isolate, work->fishStatus));
+  Handle<Value> argv[] = {obj};
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
+  //Free up the persistent function callback
+  work->callback.Reset();
+  delete work;
+  */
+}
+
+void mapIllusionMovementSync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  Work* work = new Work();
+  DWORD entAddress;
+  HANDLE handle;
+
+  Local<Object> centerObj = args[0]->ToObject();
+  Local<Value> addr = centerObj->Get(String::NewFromUtf8(isolate, "address"));
+  entAddress = addr->Int32Value();
+  //pkmSlot.x = x->Int32Value();
+  //pkmSlot.y = y->Int32Value();
+  printf("entAddress: 0x%d\n", (int)entAddress);
+  printf("entAddress: 0x%X\n", entAddress);
+
+  handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+
+  int fMapping=1, oldDirection=-1, newDirection;
+
+  while(fMapping!=0){ 
+    ReadProcessMemory(handle, (LPDWORD)(entAddress+OFFSET_ENT_DIRECTION), &newDirection, 4, NULL);
+    if(oldDirection==-1){
+      oldDirection = newDirection;
+    }else if(oldDirection != newDirection){
+      printf("%d ", newDirection);
+      switch(newDirection){
+        case 0:
+          printf("Up\n");
+          break;
+        case 1:
+          printf("Right\n");
+          break;
+        case 2:
+          printf("Down\n");
+          break;
+        case 3:
+          printf("Left\n");
+          break;
+      }
+      oldDirection = newDirection;
+    }
+  }
+  printf("Mapping Illusion finished.\n");
+
+  Local<Object> obj = Object::New(isolate);
+  obj->Set(String::NewFromUtf8(isolate, "pos"), Number::New(isolate, 8));
+  Handle<Value> argv[] = {obj};
+
+  args.GetReturnValue().Set(obj);
+}
+
+
+BOOL CALLBACK EnumWindowsProcMy(HWND hwnd,LPARAM lParam)
+{
+    DWORD lpdwProcessId;
+    GetWindowThreadProcessId(hwnd,&lpdwProcessId);
+    if(lpdwProcessId==lParam)
+    {
+        g_hwndGame = hwnd;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+
+static void getScreenGamePosComplete(uv_work_t *req, int status){
+  Isolate* isolate = Isolate::GetCurrent();
+  v8::HandleScope handleScope(isolate);
+  Work *work = static_cast<Work*>(req->data);
+
+  //prepare return vars
+  //Local<Number> val = Number::New(isolate, 1);
+  //Handle<Value> argv[] = {val};
+  //execute the callback
+  //Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
+  Local<Object> obj = Object::New(isolate);
+  obj->Set(String::NewFromUtf8(isolate, "x"), Number::New(isolate, g_gamePosX));
+  obj->Set(String::NewFromUtf8(isolate, "y"), Number::New(isolate, g_gamePosY));
+  obj->Set(String::NewFromUtf8(isolate, "w"), Number::New(isolate, g_gameWidth));
+  obj->Set(String::NewFromUtf8(isolate, "h"), Number::New(isolate, g_gameHeight));
+
+  Handle<Value> argv[] = {obj};
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
+  //Free up the persistent function callback
+  work->callback.Reset();
+  delete work;
+}
+static void getScreenGamePos(uv_work_t *req){
+
+  Work *work = static_cast<Work*>(req->data);
+  work->async.data = (void*) req;
+
+  HANDLE handle;
+  RECT rect; //instead of *rect (pointer to nowhere when only declared)
+  int addressGameScreen, initialGameScreenX, initialGameScreenY;
+
+  //printf("\n-------------------\ngetScreenGamePos:\nSearching for hwnd of the process %d\n", pid); 
+  EnumWindows(EnumWindowsProcMy, pid);
+
+  //g_hwndGame = FindWindowA(NULL, _T("PXG Client"));
+  if(g_hwndGame){
+    //printf("Found hWnd 0x%p\n", g_hwndGame);
+
+    //fast explanation here: getwindowrect asks for a LPRECT which is equivalenty a pointer to RECT. 
+    //so tdlr, it needs an adress to point and initialize the variable with the result
+
+    do{
+      //GetWindowRect(g_hwndGame, &rect)
+      if(GetClientRect(g_hwndGame, &rect)){ //working great with MapWindowPoints
+        //printf("\nCoodinates (GetWindowRect): top %d, left %d, bottom %d, right %d\n", rect.top, rect.left, rect.bottom, rect.right);
+
+        MapWindowPoints(g_hwndGame, nullptr, reinterpret_cast<POINT*>(&rect), 2);
+        //printf("\nConverted (MapWindowPoints):\nleft(x) %d, top(y) %d\n\n", rect.left, rect.top);
+      }else{
+        printf("GetClientRect Failed, error code: %d\n", GetLastError());
+      }
+
+      if(rect.left < 0 || rect.top <0){
+        //get and fill the global var screen resolution
+        SCREEN_X = GetSystemMetrics(SM_CXSCREEN);
+        SCREEN_Y = GetSystemMetrics(SM_CYSCREEN);
+        printf("\nMoving GameWindown to pos (0,0) with width: %d and height: %d\n", SCREEN_X/2, SCREEN_Y);
+        Sleep(500);
+        MoveWindow(g_hwndGame, 0, 0, SCREEN_X/2, SCREEN_Y-30, FALSE);
+      }
+
+    }while(rect.left<0 || rect.top<0);
+
+    handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+    ReadProcessMemory(handle, (LPWORD)(moduleAddr+BASEADDR_GAMESCREEN), &addressGameScreen, 4, NULL);
+    ReadProcessMemory(handle, (LPWORD)(addressGameScreen+OFFSET_GAMESCREEN_X), &initialGameScreenX, 4, NULL);
+    ReadProcessMemory(handle, (LPWORD)(addressGameScreen+OFFSET_GAMESCREEN_Y), &initialGameScreenY, 4, NULL);
+
+    //printf("Addresses: 0x%X, 0x%X, 0x%X\n", moduleAddr, BASEADDR_GAMESCREEN, moduleAddr+BASEADDR_GAMESCREEN);
+    //printf("gamePos (relative): x%d, y%d\n\n", initialGameScreenX, initialGameScreenY);
+
+    //SetCursorPos(rect.left+initialGameScreenX, rect.top+initialGameScreenY);
+
+    ReadProcessMemory(handle, (LPWORD)(moduleAddr+BASEADDR_GAMESCREEN_HEIGHT), &addressGameScreen, 4, NULL);
+    ReadProcessMemory(handle, (LPWORD)(addressGameScreen), &g_gameHeight, 4, NULL);
+    ReadProcessMemory(handle, (LPWORD)(addressGameScreen-OFFSET_GAMESCREEN_HEIGHT_WIDTH), &g_gameWidth, 4, NULL);
+
+    g_gamePosX = rect.left+initialGameScreenX;
+    g_gamePosY = rect.top+initialGameScreenY;
+
+    //Sleep(2000);
+    //SetCursorPos(g_gamePosX+g_gameWidth, g_gamePosY+g_gameHeight);
+
+    CloseHandle(handle);
+
+  }else{
+    printf("handle failed in window client\n");
+  }
+
+ 
+  printf("[battlelist] getScreenGamePosSync finished\n");
+}
+void getScreenGamePosAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+
+  Work* work = new Work();
+  work->request.data = work;
+
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[0]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  uv_queue_work(uv_default_loop(), &work->request, getScreenGamePos, getScreenGamePosComplete);
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
+void test(const FunctionCallbackInfo<Value>& args){
+  INPUT input2[2];
+
+  Isolate* isolate = args.GetIsolate();
+
+  int i = 0;
+  while(i<5){
+    ::ZeroMemory(input2, 2*sizeof(INPUT));
+    input2[0].type = INPUT_KEYBOARD;
+    input2[0].ki.wScan = 0; // hardware scan code for key
+    input2[0].ki.time = 0;
+    input2[0].ki.dwExtraInfo = 0;
+    // Press the "CTRL" key
+    input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+    input2[0].ki.dwFlags = 0; // 0 for key press
+
+    //use revive by Hotkey DEL 
+    input2[1].type = INPUT_KEYBOARD;
+    input2[1].ki.wScan = 0; // hardware scan code for key
+    input2[1].ki.time = 0;
+    input2[1].ki.dwExtraInfo = 0;
+    input2[1].ki.wVk = 0xDD; // virtual-key code for the "DEL" key
+    input2[1].ki.dwFlags = 0; // 0 for key press
+
+    SendInput(2, input2,sizeof(INPUT));
+
+    Sleep(200);
+
+    //Release of "CTRL" key
+    input2[0].type = INPUT_KEYBOARD;
+    input2[0].ki.wScan = 0; // hardware scan code for key
+    input2[0].ki.time = 0;
+    input2[0].ki.dwExtraInfo = 0;
+    input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+    input2[0].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+    //Release of "DEL" key
+    input2[1].type = INPUT_KEYBOARD;
+    input2[1].ki.wScan = 0; // hardware scan code for key
+    input2[1].ki.time = 0;
+    input2[1].ki.dwExtraInfo = 0;
+    input2[1].ki.wVk = 0xDD; // virtual-key code for the "[" key
+    input2[1].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+    SendInput(2, input2, sizeof(INPUT));
+    Sleep(2000);
+    i++;
+  }
+
 
   Local<Number> val = Number::New(isolate, 1);
   Handle<Value> argv[] = {val};
@@ -2033,16 +3406,23 @@ void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "fish", fishAsync);
   NODE_SET_METHOD(exports, "readBlCounter", readBlCounterAsync);
   NODE_SET_METHOD(exports, "attackPkm", attackPkmAsync);
-  NODE_SET_METHOD(exports, "waitForDeath", waitForDeathAsync);
   NODE_SET_METHOD(exports, "isPkmNear", isPkmNearAsync);
   NODE_SET_METHOD(exports, "isPkmNearSync", isPkmNearSync);
   NODE_SET_METHOD(exports, "isPlayerPkmSummoned", isPlayerPkmSummonedSync);
   NODE_SET_METHOD(exports, "revivePkm", revivePkmSync);
+  NODE_SET_METHOD(exports, "registerHkSwapPkm", registerHkSwapPkmAsync);
   NODE_SET_METHOD(exports, "registerHkRevivePkm", registerHkRevivePkmAsync);
+  NODE_SET_METHOD(exports, "registerHkDragBox", registerHkDragBoxAsync);
+  NODE_SET_METHOD(exports, "registerHkMedicineLoop", registerHkMedicineLoopAsync);
+  NODE_SET_METHOD(exports, "registerPkmSlot", registerPkmSlotSync);
   NODE_SET_METHOD(exports, "getPlayerPos", getPlayerPosAsync);
   NODE_SET_METHOD(exports, "runProfile", runProfileAsync);
   NODE_SET_METHOD(exports, "stopProfileSync", stopProfileSync);
-  NODE_SET_METHOD(exports, "testread", testread);
+  NODE_SET_METHOD(exports, "mapUnownMovementSync", mapUnownMovementSync);
+  NODE_SET_METHOD(exports, "mapIllusionMovementSync", mapIllusionMovementSync);
+  NODE_SET_METHOD(exports, "runCyberScript", runCyberScriptAsync);
+  NODE_SET_METHOD(exports, "getScreenGamePos", getScreenGamePosAsync);
+  NODE_SET_METHOD(exports, "test", test);
 //  NODE_SET_METHOD(exports, "sendKey", sendKey);
 }
 

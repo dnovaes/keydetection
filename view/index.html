@@ -12,47 +12,75 @@
       <span></span>
     </div>
 
+    <div id="close-icon" style="-webkit-app-region: no-drag"></div>
+
     <div id="main-screen">
       <span id="background_pkm"></span>
       <div class="content">
 
-        <div class="menu-item-small" id="fishing">
-          <span class="icon-button"></span>
-          <div class="text">Fishing</div>
-        </div>
+        <div class="menu-1">
+          <div id="nextToMenu2" class="button next-options"></div>
 
-        <div class="menu-item-small" id="revive">
-          <span class="icon-button"></span>
-          <div class="text">Auto-Revive</div>
-        </div>
+          <div class="menu-item-small" id="fishing">
+            <span class="icon-button"></span>
+            <div class="text">Fishing</div>
+          </div>
 
-        <div class="clear-float"></div>
+          <div class="menu-item-small" id="revive">
+            <span class="icon-button"></span>
+            <div class="text">Auto-Revive</div>
+          </div>
 
-        <div class="menu-item" id="screenCoords">
-          <span class="icon-button"></span>
-          <div id="coord_span">
-            <div class="coord_element">
-              <label for="coordx" class="coord_label">x</label>
-              <input name="coordx" class="coord_field" disabled>
-            </div>
-            <div class="coord_element">
-              <label for="coordy" class="coord_label">y</label>
-              <input name="coordy" class="coord_field" disabled>
-            </div>
-            <div class="coord_element">
-              <label for="coordw" class="coord_label">w</label>
+          <div class="clear-float"></div>
+
+          <div class="menu-item" id="screenCoords">
+            <span class="icon-button"></span>
+            <div id="coord_span">
+              <div class="coord_element">
+                <label for="coordx" class="coord_label">x</label>
+                <input name="coordx" class="coord_field" disabled>
+              </div>
+              <div class="coord_element">
+                <label for="coordy" class="coord_label">y</label>
+                <input name="coordy" class="coord_field" disabled>
+              </div>
+              <div class="coord_element">
+                <label for="coordw" class="coord_label">w</label>
               <input name="coordw" class="coord_field" disabled>
+              </div>
+              <div class="coord_element">
+                <label for="coordh" class="coord_label">h</label>
+                <input name="coordh" class="coord_field" disabled>
+              </div>
             </div>
-            <div class="coord_element">
-              <label for="coordh" class="coord_label">h</label>
-              <input name="coordh" class="coord_field" disabled>
-            </div>
+          </div>
+
+          <div class="clear-float"></div>
+
+          <div class="menu-item-small" id="caveBot">
+            <span class="icon-button"></span>
+            <div class="text">Cave-bot</div>
+          </div>
+
+
+          <div class="menu-item-small" id="hkConfig">
+            <span class="icon-button"></span>
+            <div class="text">Hotkeys</div>
           </div>
         </div>
 
-        <div class="menu-item" id="caveBot">
-          <span class="icon-button"></span>
-          <div class="text">Cave-bot</div>
+        <div class="menu-2">
+          <div id="nextToMenu1" class="button next-options"></div>
+
+          <div class="menu-item-small" id="uchallenges">
+            <span class="icon-button"></span>
+            <div class="text">Challenges</div>
+          </div>
+
+          <div class="menu-item-small" id="cyber">
+            <span class="icon-button"></span>
+            <div class="text">Cyber</div>
+          </div>
         </div>
 
         <div id="console-title">Console:<br></div>
@@ -80,13 +108,18 @@
 
       <div id="container-functions">
         <div class="container-title"> functions</div>
-        <div class="features">
-          <div id="checkpoint" class="feature-el"></div>
-          <div id="hand" class="feature-el"></div>
-          <div id="keyboard" class="feature-el"></div>
+        <div class="functions">
+          <div id="checkpoint" class="function-el"></div>
+          <div id="hand" class="function-el"></div>
+          <div id="btHotkey" class="function-el"></div>
           <div class="clear-float"></div>
-          <div id="battle" class="feature-el"></div>
-          <div id="sleep" class="feature-el"></div>
+          <div id="battle" class="function-el"></div>
+          <div id="sleep" class="function-el"></div>
+          <div id="btRevive" class="function-el"></div>
+          <div class="clear-float"></div>
+          <div id="btLogon" class="function-el"></div>
+          <div id="btSummonPkm" class="function-el"></div>
+          <div id="btBackPkm" class="function-el"></div>
         </div>
         <div id="btStart">
           <span class="icon-button"></span>
@@ -96,40 +129,141 @@
 
       <div id="container-loot"></div>
 
-      <div id="footer">
-        <div class="menu-icon" id="btVoltar"></div>
+      <div class="footer">
+        <div class="menu-icon btVoltar"></div>
       </div>
 
     </div>
+
+    <div id="hk-screen">
+      <div class="content">
+        <div class="divHotkey">
+          <button id="hkRevive" class="setKey">Set Key</button>
+          <input type="checkbox" id="chkboxRevive" name="feature" value="revive" />
+          <label for="revive">Use Revive and Summon Pkm</label>
+        </div>
+    
+        <div class="divHotkey">
+          <button id="hkChangePkm" class="setKey">Set Key</button>
+          <input type="checkbox" id="chkboxChangePkm" name="feature" value="changepkm" />
+          <label for="horns">Change Pokemon from Second Slot</label>
+        </div>
+    
+<!--        <div class="divHotkey">
+          <button class="setKey">Set Key</button>
+          <input type="checkbox" id="claws" name="feature" value="claws" />
+          <label for="claws">Claws</label>
+        </div>-->
+      </div>
+      <div class="footer">
+        <div class="menu-icon btVoltar"></div>
+      </div>
+    </div>
+
+    <div id="challenge-screen">
+
+      <div class="unownel">
+        <label>Unown</label>
+        <button id="btUnown">Start Tracing</button>
+        <span class="label" id="labelUnown"></span>
+      </div>
+
+      <div class="divHotkey unownel">
+        <button id="hkDragBox" class="setKey">Set Key</button>
+        <input type="checkbox" id="chkboxDragBox" name="dragbox" value="dragbox" />
+        <label for="dragbox">Check box and Drag it to sqm below</label>
+      </div>
+
+      <div class="unownel">
+        <label>Illusion</label>
+        <button id="btIllusion">Start Tracing</button>
+        <span id="labelIllusion"></span>
+      </div>
+
+      <div class="divHotkey unownel">
+        <button id="hkCardChallenge" class="setKey">Set Key</button>
+        <input type="checkbox" id="chkboxCardChallenge" name="pkmCard" value="pkmCard" />
+        <label for="pkmCard">Copy cards to a temp window</label>
+      </div>
+
+      <div class="divHotkey unownel">
+        <button id="hkMedicineLoop" class="setKey">Set Key</button>
+        <input type="checkbox" id="chkboxMedicineLoop" name="medicineLoop" value="medicineLoop" />
+        <label for="medicineLoop">Activate medicine in loop (Mewtwo Main)</label>
+      </div>
+
+      <div class="footer">
+        <div class="menu-icon btVoltar"></div>
+      </div>
+
+    </div>
+
   </body>
 
   <script type="text/javascript" src="../bot.js"></script>
   <script type="text/javascript">
     console.log(process.versions);
     const fs = require('fs');
+    const {remote, shell} = require('electron');
 
     /* Flags */
 
     lockFlag = 0;
     caveFlag = 0;
+    adminFlag = 1;
+    fCyber = 0;
 
     /* Elements */
-
     divCaveBot = document.querySelector("#caveBot");
     divCaveIcon = document.querySelector("#caveBot span");
+    divHkConfig = document.querySelector("#hkConfig");
+    divUChallenges = document.querySelector("#uchallenges");
+    divCyber = document.querySelector("#cyber");
 
     divCaveScreen = document.querySelector("#cave-screen");
+    divHkScreen = document.querySelector("#hk-screen");
     divMainScreen = document.querySelector("#main-screen");
+    divChallengeScreen = document.querySelector("#challenge-screen");
 
     listCommands = document.querySelector(".list-commands");
     selProfile = document.getElementById("profile");
 
+    divMenu1 = document.querySelector(".menu-1");
+    divMenu2 = document.querySelector(".menu-2");
+
+    labelUnown = document.querySelector("labelUnown");
+
     /* Buttons */
-    btVoltar = document.querySelector("#btVoltar");
+    btVoltar = document.querySelectorAll(".btVoltar");
     btNew = document.getElementById("new");
     btSleep = document.getElementById("sleep");
     btStart = document.getElementById("btStart");
     btHand = document.querySelector("#hand");
+    btHotkey = document.querySelector("#btHotkey");
+    btRevive = document.querySelector("#btRevive");
+    btLogon = document.querySelector("#btLogon");
+    btSummonPkm = document.querySelector("#btSummonPkm");
+    btBackPkm = document.querySelector("#btBackPkm");
+    hkRevive = document.querySelector("#hkRevive");
+    hkChangePkm = document.querySelector("#hkChangePkm");
+    hkDragBox = document.querySelector("#hkDragBox");
+    hkCardChallenge = document.querySelector("#hkCardChallenge");
+    hkMedicineLoop = document.querySelector("#hkMedicineLoop");
+    btNextToMenu1 = document.querySelector("#nextToMenu1");
+    btNextToMenu2 = document.querySelector("#nextToMenu2");
+    btUnown =  document.querySelector("#btUnown");
+    btIllusion =  document.querySelector("#btIllusion");
+    btCloseIcon = document.querySelector("#close-icon");
+
+    /* Checkbox */
+    chkboxRevive = document.querySelector("#chkboxRevive");
+    chkboxChangePkm = document.querySelector("#chkboxChangePkm");
+    chkboxDragBox = document.querySelector("#chkboxDragBox");
+    chkboxCardChallenge = document.querySelector("#chkboxCardChallenge");
+    chkboxMedicineLoop = document.querySelector("#chkboxMedicineLoop");
+
+    /* Input */
+    //inputPokeAddress = document.querySelector("#pokeaddress");
 
     /* Functions */
     var removeCommandEl = (e) => {
@@ -175,6 +309,7 @@
       lockFlag = 0;
     }
 
+    //load name of the profiles from dir path
     var loadProfiles = (dirPath) => {
       fs.readdir( dirPath, function(err, files){
         if(err){
@@ -194,10 +329,12 @@
           option.text = filename;
           selProfile.appendChild(option);
         });
+
         //load commands from the first selected
         let iSelected = selProfile.options.selectedIndex;
         let fileName = selProfile.options[iSelected].text;
         loadCommands(fileName);
+
       });
     }
 
@@ -215,6 +352,7 @@
       }
     }
 
+    //load commands from json file
     var loadCommands = (fileName) => {
       fs.readFile(`./configuration/profiles/${fileName}.json`, "utf-8", (err, data) => {
         if (err) throw err;
@@ -222,6 +360,7 @@
         //clear list before loading commands
         clearListCommands();
 
+        let textCommand = ``; 
         //add commands from the file to the list
         for(var i=0; i<obj.content.length; i++){
           let newCommand = document.createElement("li");
@@ -240,6 +379,25 @@
               newCommand.dataset.posx = obj.content[i].pos[0];
               newCommand.dataset.posy = obj.content[i].pos[1];
               newCommand.innerHTML = `<div class="sel-text">${obj.content[i].clickType}click (${obj.content[i].pos[0]}, ${obj.content[i].pos[1]}) </div><div class="remove-el"></div>`;
+              break;
+            case 'hotkey':
+              newCommand.dataset.key = obj.content[i].key;
+              newCommand.dataset.value = obj.content[i].value;
+              newCommand.innerHTML = `<div class="sel-text">use Hotkey "${obj.content[i].key}"</div><div class="remove-el"></div>`;
+              break;
+            case 'login':
+              newCommand.innerHTML = `<div class="sel-text">Login</div><div class="remove-el"></div>`;
+              break;
+            case 'logoff':
+              newCommand.innerHTML = `<div class="sel-text">Logoff</div><div class="remove-el"></div>`;
+              break;
+            case "summonPkm":
+              textCommand = `Pkm Go`;
+              newCommand.innerHTML = `<div class="sel-text">${textCommand}</div><div class="remove-el"></div>`;
+              break;
+            case "backPkm":
+              textCommand = `Pkm Back`;
+              newCommand.innerHTML = `<div class="sel-text">${textCommand}</div><div class="remove-el"></div>`;
               break;
           }
           newCommand.addEventListener("click", highlightCommand);
@@ -273,12 +431,45 @@
             obj.content[i].pos.push(listCommands.children[i].dataset.posy);
             obj.content[i].clickType = listCommands.children[i].dataset.clickType;
             break;
+          case 'hotkey':
+            obj.content[i].key= listCommands.children[i].dataset.key;
+            obj.content[i].value = listCommands.children[i].dataset.value;
+            break;
           default:
             console.log("default choosen");
             break;
         }
       }
+      console.log(obj);
       return obj;
+    }
+
+    var addCommandToProfile = (commandType) => {
+      //console.log(commandType);
+      let newCommand = document.createElement("li");
+      newCommand.classList.add("sel-el");
+      newCommand.dataset.cmdType = commandType;
+      //newCommand.dataset.key = e1.key;
+      //newCommand.dataset.value = e1.keyCode;
+      let textCommand;
+      switch(commandType){
+        case "login":
+          textCommand = `Login`;
+          break;
+        case "logoff":
+          textCommand = `Logout`;
+          break;
+        case "summonPkm":
+          textCommand = `Pkm Go`;
+          break;
+        case "backPkm":
+          textCommand = `Pkm Back`;
+          break;
+      }
+      newCommand.innerHTML = `<div class="sel-text">${textCommand}</div><div class="remove-el"></div>`;
+      newCommand.addEventListener("click", highlightCommand);
+      newCommand.children[1].addEventListener("click", removeCommandEl);
+      addCommandToList(newCommand);
     }
 
     /* Events */
@@ -302,13 +493,39 @@
 
     divCaveBot.addEventListener("click", function(){
       divCaveScreen.style.display = "block";
+      divHkScreen.style.display = "none";
       divMainScreen.style.display = "none";
       loadProfiles("./configuration/profiles");
     });
 
-    btVoltar.addEventListener("click", function(){
+    divHkConfig.addEventListener("click", function(){
       divCaveScreen.style.display = "none";
-      divMainScreen.style.display = "block";
+      divHkScreen.style.display = "block";
+      divMainScreen.style.display = "none";
+      loadProfiles("./configuration/profiles");
+    });
+
+    divUChallenges.addEventListener("click", function(){
+      divMainScreen.style.display = "none";
+      divChallengeScreen.style.display = "block";
+    });
+
+    divCyber.addEventListener("click", function(){
+      if(!fCyber){
+        runCyberScript();
+      }else{
+        bl.stopProfileSync();
+        divCyber.style.background = 'linear-gradient(red, #774247)';
+      }
+    });
+
+    btVoltar.forEach( function( bt, index){
+      bt.addEventListener("click", function(){
+        divCaveScreen.style.display = "none";
+        divHkScreen.style.display = "none";
+        divMainScreen.style.display = "block";
+        divChallengeScreen.style.display = "none";
+      });
     });
 
     BtsRemoveEl = document.querySelectorAll(".remove-el");
@@ -390,6 +607,7 @@
 
               let elRunningNow = listCommandsProfile[res.cmdPos];
               elRunningNow.classList.add("running");
+              elRunningNow.scrollIntoView();
             }
           });
         });
@@ -439,6 +657,89 @@
       }
     });
 
+    btHotkey.addEventListener("click", function(){
+      if(!lockFlag){
+        addLockScreen();
+        let divPrompt = document.createElement("div");
+        divPrompt.classList.add("prompt");
+        divPrompt.classList.add("lock-el");
+
+        let btHotkeyCommand = document.createElement("button");
+        btHotkeyCommand.classList.add("setKey");
+        btHotkeyCommand.innerHTML = "Set Key"
+        divPrompt.appendChild(btHotkeyCommand);
+
+        btHotkeyCommand.addEventListener("click", function(e){
+          e.target.addEventListener("keydown", function(e1){
+            e.target.innerText = e1.key; 
+
+            let newCommand = document.createElement("li");
+            newCommand.classList.add("sel-el");
+            newCommand.dataset.cmdType = "hotkey";
+            newCommand.dataset.key = e1.key;
+            newCommand.dataset.value = e1.keyCode;
+            newCommand.innerHTML = `<div class="sel-text">use Hotkey "${e1.key}"</div><div class="remove-el"></div>`;
+            newCommand.addEventListener("click", highlightCommand);
+            newCommand.children[1].addEventListener("click", removeCommandEl);
+            addCommandToList(newCommand);
+            removeLockScreen();
+          });
+
+        });
+        document.body.appendChild(divPrompt);
+      }
+    });
+
+    btRevive.addEventListener("click", function(){
+      if(!lockFlag){
+        let newCommand = document.createElement("li");
+        newCommand.classList.add("sel-el");
+        newCommand.dataset.cmdType = "revive";
+        newCommand.innerHTML = `<div class="sel-text">use Revive</div><div class="remove-el"></div>`;
+        newCommand.addEventListener("click", highlightCommand);
+        newCommand.children[1].addEventListener("click", removeCommandEl);
+        addCommandToList(newCommand);
+      }
+    });
+
+    btLogon.addEventListener("click", function(){
+      if(!lockFlag){
+        addLockScreen();
+        let divPrompt = document.createElement("div");
+        divPrompt.classList.add("prompt");
+        divPrompt.classList.add("lock-el");
+        divPrompt.innerHTML = `
+          <button name="login" class="logonType">LogIn</button>
+          <button name="logoff" class="logonType">LogOff</button>
+        `;
+        document.body.appendChild(divPrompt);
+
+        let btsLogonType = document.querySelectorAll(".logonType");
+        btsLogonType.forEach(function(bt, i){
+            bt.addEventListener("click", function(bt, i){
+              //console.log(`hello ${bt.srcElement.name}`)
+              addCommandToProfile(bt.srcElement.name);
+              removeLockScreen();
+            });
+        });
+
+      }
+
+    });
+
+    btSummonPkm.addEventListener("click", function(){
+      if(!lockFlag){
+        addCommandToProfile(`summonPkm`);
+      }
+    });
+
+
+    btBackPkm.addEventListener("click", function(){
+      if(!lockFlag){
+        addCommandToProfile(`backPkm`);
+      }
+    })
+
     btHand.addEventListener("click", function(){
       if(!lockFlag){
         addLockScreen();
@@ -462,15 +763,16 @@
                   let newCommand = document.createElement("li");
                   newCommand.classList.add("sel-el");
                   newCommand.dataset.cmdType = "mouseclick";
-                  newCommand.dataset.clickType= "left";
+                  newCommand.dataset.clickType = "left";
                   let posX = (res.x-center.x)/sqm.length;
                   posX = Math.round(posX);
                   let posY = (res.y-center.y)/sqm.height;
                   posY = Math.round(posY);
                   newCommand.dataset.posx= posX;
                   newCommand.dataset.posy= posY;
-                  newCommand.addEventListener("click", removeCommandEl);
                   newCommand.innerHTML = `<div class="sel-text">leftclick (${posX}, ${posY})</div><div class="remove-el"></div>`;
+                  newCommand.addEventListener("click", highlightCommand);
+                  newCommand.children[1].addEventListener("click", removeCommandEl);
                   addCommandToList(newCommand);
                   removeLockScreen();
                 });
@@ -488,8 +790,9 @@
                   newCommand.dataset.clickType= "right";
                   newCommand.dataset.posx= res.x;
                   newCommand.dataset.posy= res.y;
-                  newCommand.addEventListener("click", removeCommandEl);
                   newCommand.innerHTML = `<div class="sel-text">rightclick (${res.x}, ${res.y})</div><div class="remove-el"></div>`;
+                  newCommand.addEventListener("click", highlightCommand);
+                  newCommand.children[1].addEventListener("click", removeCommandEl);
                   addCommandToList(newCommand);
                   removeLockScreen();
                 });
@@ -497,25 +800,142 @@
             });
           }
         });
-        /*
-        btConfirmPrompt.addEventListener("click", function(){
-          let input = document.querySelector(".prompt input");
-          if(input.value){
-            input.value*=1000;
-            //console.log(`value in miliseconds: ${input.value}`);
-
-            let newCommand = document.createElement("li");
-            newCommand.classList.add("sel-el");
-            newCommand.dataset.cmdType = "sleep";
-            newCommand.dataset.value = input.value;
-            newCommand.addEventListener("click", removeCommandEl);
-            newCommand.innerHTML = `<div class="sel-text">Sleep for ${input.value/1000}s</div><div class="remove-el"></div>`;
-            listCommands.appendChild(newCommand);
-            removeLockScreen();
-          }
-        });
-        */
       }
+    });
+
+    var runCyberScript = () => {
+      fCyber = 1;
+      divCyber.style.background = 'linear-gradient(#774247, #f7e53f)';
+      focuscc.focusWindow(function(res){
+        //bl.test();
+        bl.runCyberScript(function(resCyber){
+          if(resCyber.hasOwnProperty("countdown")){
+            setTimeout(runCyberScript, 17*60000+57900); //c.o
+          }
+          /*
+          if(resCyber){
+            console.log(`bl.runCyberScript finished`);
+            //setTimeout(runCyberScript, 67000); //togetic
+            setTimeout(runCyberScript, 17*60000-2000); //c.o
+          }*/
+        });
+      });
+    }
+
+    var hkKeydown = (e) => {
+      e.target.innerText = e.key; 
+      e.target.dataset.keyCode = e.keyCode;
+      console.log(`${e.keyCode}`);
+      e.target.removeEventListener("keydown", hkKeydown)
+    }
+    hkRevive.addEventListener("click", function(e){
+      e.target.addEventListener("keydown", hkKeydown);
+    });
+    hkChangePkm.addEventListener("click", function(e){
+      e.target.addEventListener("keydown", hkKeydown);
+    });
+    hkDragBox.addEventListener("click", function(e){
+      e.target.addEventListener("keydown", hkKeydown);
+    }); 
+    hkCardChallenge.addEventListener("click", function(e){
+      e.target.addEventListener("keydown", hkKeydown);
+    });
+    hkMedicineLoop.addEventListener("click", function(e){
+      e.target.addEventListener("keydown", hkKeydown);
+    });
+
+    chkboxChangePkm.addEventListener("click", function(e){
+      if(hkChangePkm.dataset.keyCode == undefined){
+        alert("Configure your hotkey first");
+        e.preventDefault();
+      }else if(e.target.checked){
+        console.log("hkChangePkm Pronto pra usar!");
+        bl.registerHkSwapPkm(hkChangePkm.dataset.keyCode);
+      }else{
+        //unregister swap hotkey
+        //bl.unregisterHk(2);
+      }
+    });
+
+    chkboxDragBox.addEventListener("click", function(e){
+      if(hkDragBox.dataset.keyCode == undefined){
+        alert("Configure your hotkey first");
+        e.preventDefault();
+      }else if(e.target.checked){
+        console.log("hkDragBox pronto pra usar!");
+        bl.registerHkDragBox(hkDragBox.dataset.keyCode);
+      }else{
+        //unregister swap hotkey
+        //bl.unregisterHk(2);
+      }
+    });
+
+    chkboxCardChallenge.addEventListener("click", function(e){
+      if(hkCardChallenge.dataset.keyCode == undefined){
+        alert("Configure your hotkey first");
+        e.preventDefault();
+      }else if(e.target.checked){
+        console.log("hkCardChallenge pronto pra usar!");
+        sharexNode.startWndCardChallenge(hkCardChallenge.dataset.keyCode);
+      }else{
+        //unregister hotkey
+        //bl.unregisterHk(2);
+      }
+    });
+
+    chkboxMedicineLoop.addEventListener("click", function(e){
+      if(hkMedicineLoop.dataset.keyCode == undefined){
+        alert("Configure your hotkey first");
+        e.preventDefault();
+      }else if(e.target.checked){
+        console.log("hkMedicineLoop pronto pra usar!");
+        bl.registerHkMedicineLoop(hkMedicineLoop.dataset.keyCode);
+      }else{
+        //unregister hotkey
+        //bl.unregisterHk(2);
+      }
+    });
+
+    btNextToMenu1.addEventListener("click", function(){
+      divMenu1.style.display = "block";
+      divMenu2.style.display = "none";
+    });
+
+    btNextToMenu2.addEventListener("click", function(){
+      divMenu1.style.display = "none";
+      divMenu2.style.display = "block";
+    });
+
+    if(!adminFlag){
+      btNextToMenu2.style.display = "none";
+    } 
+
+    btCloseIcon.addEventListener("click", function(e){
+      remote.app.quit();
+    });
+
+    btUnown.addEventListener("click", function(){
+      //obj.address = parseInt(inputPokeAddress.value, 16); //string to int hexadecimal
+      //alert(obj.address.toUpperCase());
+      //alert(obj.address.toString(16).toUpperCase());
+
+      console.log(`lastEntAppeared: ${lastEntAppeared.name}`);
+      if(lastEntAppeared.name == "Unown"){ //unown as NPC
+        let obj = {}
+        obj.address = lastEntAppeared.addr;
+        alert(`${lastEntAppeared.name} ${lastEntAppeared.addr}`);
+        console.log(bl.mapUnownMovementSync(obj));
+      }
+    });
+
+    btIllusion.addEventListener("click", function(){
+      console.log(`lastEntAppeared: ${lastEntAppeared.name}`);
+      //if(lastEntAppeared.name == "Illusion"){
+        let obj = {}
+        obj.address = lastEntAppeared.addr;
+        alert(`${lastEntAppeared.name} ${lastEntAppeared.addr}`);
+        console.log(bl.mapIllusionMovementSync(obj));
+      //}
     });
 
   </script>

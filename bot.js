@@ -1,6 +1,5 @@
 
 const bl = require("../build/Release/battlelist");
-const sharexNode = require("../build/Release/sharex");
 const keyboard = require("../build/Release/keyboard");
 const focuscc = require("../build/Release/focus");
 const mouse = require("../build/Release/mouse");
@@ -8,7 +7,6 @@ const AsyncLock = require('async-lock');
 
 //global vars
 //var win = remote.BrowserWindow.fromId(1);
-var pause = true;
 var battlePokelist = {};
 var searchPokeArr= ["Magikarp", "Rattata"];
 var lock = new AsyncLock();
@@ -17,6 +15,7 @@ var moduleAddr = 0;
 var pid = 0;
 var fRevive = 0;
 var fPause = false;
+var lastEntAppeared = {}
 
 var center = {
   "x": 0,
@@ -27,10 +26,9 @@ var sqm = {
   "height": 0
 }
 var pos = {
-  pkmSlot: { "x":1432, "y":139 },
-  reviveSlot: { "x":1464, "y":139 }
+  pkmSlot: { "x":1200, "y":182 },
+  reviveSlot: { "x":1180, "y":182 }
 }
-var counterBattlelist = 168; // === 0
 var fBtnScreenCoords = 0;
 
 var printlog = function(arg){
@@ -49,49 +47,72 @@ var printlog = function(arg){
 }
 
 var audio = new Audio('../assets/audio.mp3');
-/*
-focuscc.focusWindow(function(res){
-  bl.revivePkm();
-});
-*/
+var gmAudio = new Audio('../assets/Pkm RedBlueYellow - Evil Trainer Encounter.mp3');
+var playerAudio = new Audio('../assets/Pkm RedBlue Wild Battle Music.mp3');
 
 //first function to run. It gets moduleaddress and pid of the program too
 bl.getBattleList(function(res){
   let i;
 
   if(res.fAction == 2){
-    switch(res.type){
-      case 152:
-        res.type = "NPC";
-        break;
-      case 7: //myself
-      case 88:
-        res.type = "PLAYER";
-        break;
-      //case 112:
-      case 108:
-        res.type = "POKEMON";
-        if((battlePokelist[res.addr] === 0)||(battlePokelist[res.addr] === undefined)){
-          for(i=0;i<searchPokeArr.length;i++){
-            if(searchPokeArr[i] == res.name){
-              battlePokelist[res.addr] = {
-                "addr": res.addr,
-                "name": res.name,
-                "type": res.type,
-                "lookType": res.lookType,
-                "counterBl": res.counterBl
+    let creatureName = res.name;
+
+    console.log(res);
+    //Support Member 
+    if(res.name.includes("Support")){
+      gmAudio.play();
+      printlog(`\n\nSupport Member!\n\n`);
+    }else{
+
+      switch(res.type){
+        case 152:
+          res.type = "NPC";
+          break;
+        case 7: //myself
+        case 56:
+          res.type = "PLAYER";
+          playerAudio.play();
+          break;
+        //case 112:
+        case 244:
+          res.type = "POKEMON";
+          if((battlePokelist[res.addr] === 0)||(battlePokelist[res.addr] === undefined)){
+            for(i=0;i<searchPokeArr.length;i++){
+              if(searchPokeArr[i] == res.name){
+                battlePokelist[res.addr] = {
+                  "addr": res.addr,
+                  "name": res.name,
+                  "type": res.type,
+                  "lookType": res.lookType,
+                  "counterNumber": res.counterNumber
+                }
+              }
+
+              if((creatureName === "Machamp")&&(res.lookType != 121)){
+                //https://i.imgur.com/hDB7e46.png/ shiny machamp looktype 26
+                audio.play();
+                printlog(`\nShiny Machamp!\n`);
+              }else if((creatureName === "Farfetch'd") && (res.lookType == 8)){
+                audio.play();
+                printlog(`\nElite Farfetch'd!\n`);
+              }else if((creatureName === "Gengar") && (res.lookType != 244)){
+                audio.play();
+                printlog(`\nShiny Gengar!\n`);
+              }else if((creatureName === "Pidgeot") && (res.lookType != 80)){
+                audio.play();
+                printlog(`\nShiny Pidgeot!\n`);
+              }else if(creatureName === "Feebas"){
+                audio.play();
+                printlog(`\nFeebas!\n`);
               }
             }
-            if((res.name === "Machamp")&&(res.lookType != 121)){
-              //https://i.imgur.com/hDB7e46.png/ shiny machamp looktype 26
-              audio.play();
-              printlog(`\nShiny Machamp!\n`);
-            }
-            break;
           }
-        }
-        break;
+          break;
+      }
     }
+
+    lastEntAppeared.name = res.name;
+    lastEntAppeared.addr = res.addr;
     printlog(`0x${res.addr.toString(16).toUpperCase()}  ${res.name} ${res.type} ${res.lookType}`)
   }else{
     moduleAddr = res.moduleAddr;
@@ -109,31 +130,21 @@ mouse.getCursorPosbyClick(function(res){
 
 
 // ============  Global Bot Hotkeys =====================
-//f10 key = pause
+//'=' key = pause, previously the f10 key
 bl.registerHKF10Async(function(res){
   fPause = !fPause;
-  console.log(`F10 key detected!! Status: ${fPause}`);
+  console.log(`Pause key detected!! (JS) Status: ${fPause}`);
   //bl.testread();
 });
-/*
-addon.registerHKF10Async(function(res){
-  console.log("F10 key detected!!");
-  if(center.x != 0 & center.y != 0){
-    prepareForFishing();
-  }else{
-    alert(`Configure a tela do seu pokemon pelo bot antes de iniciar`);
-  }
-});
-*/
 
 //delete key
 bl.registerHkRevivePkm(function(res){
-  if(fRevive === 1){
+  /*if(fRevive === 1){
     console.log("REVIVE key detected!!");
     focuscc.focusWindow(function(res){
-      bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
+      bl.revivePkm();
     });
-  }
+  }*/
 });
 
 
@@ -148,9 +159,12 @@ divFishing.addEventListener("click", function(){
     }, 100);
     prepareForFishing();
   }else{
-    alert(`Configure a tela do seu pokemon pelo bot antes de iniciar`);
+    alert(`Antes de iniciar, configure a coordenadas da tela do seu cliente pelo bot`);
   }
 });
+
+//default Pc Lukas
+bl.registerPkmSlot(pos.pkmSlot);
 
 divRevive = document.getElementById("revive");
 divRevive.addEventListener("click", function(){
@@ -164,6 +178,7 @@ divRevive.addEventListener("click", function(){
         pos.pkmSlot.x = res.x;
         pos.pkmSlot.y = res.y;
         divRevive.style.background = 'linear-gradient(#774247, #f7e53f)';
+        bl.registerPkmSlot(pos.pkmSlot);
         fRevive=1;
       });
 
@@ -190,13 +205,28 @@ divScreenCoords.addEventListener("click", function(){
       focuscc.focusWindow(function(res){
         //win.minimize();
 
-        //select game window
+        //get game screen coords
+        /*
         sharexNode.getScreenResolution(function(res){
           updateScreenCoords(res);
           fBtnScreenCoords = 0;
         });
-        //#5db31c = green
+        */
+        bl.getScreenGamePos(function(res){
+          //res = { x: 970, y: 136, w: 442, h: 324 }
+          //updateScreenCoords(res);
+          console.log(`getScreenGamePos finished`);
+          if(res){
+            updateScreenCoords(res);
+            divScreenCoords.style.background = 'linear-gradient(#774247, #f7e53f)';
+          }
+          //#5db31c = green
+        });
       });
+    }else{
+      updateScreenCoords({x:0, y:0, w:0, h:0});
+      divScreenCoords.style.background = 'linear-gradient(red, #774247)';
+      fBtnScreenCoords = 0;
     }
 });
 
@@ -214,9 +244,10 @@ btCheckpoint.addEventListener("click", function(){
   let newCommand = document.createElement("li");
   newCommand.classList.add("sel-el");
   newCommand.dataset.cmdType = "check";
-  newCommand.addEventListener("click", removeCommandEl);
   bl.getPlayerPos(function(res){
     newCommand.innerHTML = `<div class="sel-text">${res.posx},${res.posy},${res.posz}</div><div class="remove-el"></div>`;
+    newCommand.addEventListener("click", highlightCommand);
+    newCommand.children[1].addEventListener("click", removeCommandEl);
     addCommandToList(newCommand);
   });
 });
@@ -224,15 +255,14 @@ btCheckpoint.addEventListener("click", function(){
 // ============  Fishing  =====================
 
 function prepareForFishing(){
-  if(pause == true){
-    console.log("Unpaused!");
+  if(fPause == false){
+    console.log("start Fishing!");
     divFishing.style.background = 'linear-gradient(#774247, #f7e53f)';
     startFishing();
   }else{
-    console.log("Pause Requested!");
+    console.log("Fishing Pause l-244!");
     divFishing.style.background = 'linear-gradient(red, #774247)';
   }
-  pause = !pause;
 }
 
 function startFishing(){
@@ -245,12 +275,14 @@ function startFishing(){
   focuscc.focusWindow(function(res){
 
     //test if player's pokemon is out of pokebal.. if not use revive and summon it //sync function
+    /*
     fPkmSummoned = bl.isPlayerPkmSummoned();
     console.log(`is pokemon summoned? ${fPkmSummoned.status}`);
     if(fPkmSummoned.status == "1" && fRevive === 1){
       //bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
-      bl.revivePkm(pos.pkmSlot, {x: 0, y: 0});
+      bl.revivePkm();
     }
+    */
 
     //move mouse 2 sqm distance to the top from the caracter
     coords.x = center.x+(3*sqm.length);
@@ -270,18 +302,19 @@ function startFishing(){
         done();
       });
 
+      /*
       //test if player's pokemon is out of pokebal.. if not use revive and summon it //sync function
       fPkmSummoned = bl.isPlayerPkmSummoned();
       if(fPkmSummoned.status == "1" && fRevive === 1){
-        bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
+        bl.revivePkm();
       }
-
+      */
     }, function(err, ret){
       console.log("lockmouse released");
       //test if player's pokemon is out of pokebal.. if not use revive and summon it //sync function
       fPkmSummoned = bl.isPlayerPkmSummoned();
       if(fPkmSummoned.status == "1" && fRevive === 1){
-        bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
+        bl.revivePkm();
       }
 
       //if player started fishing (3), wait for pokemon to get the fish, if not, restart fishing
@@ -294,15 +327,15 @@ function startFishing(){
         mouse.getColorFishing({
           "x": coords.x, "y": coords.y
         }, pid, moduleAddr, function(res){
-          if(!pause){
+          if(!fPause){
             keyboard.pressKbKey("Fishing", function (res){
               console.log("Fishing Rod Pulled Up!!");
               //end of fishing
 
-              //test if player's pokemon is out of pokebal.. if not use revive and summon it //sync function
+              //test if player's pokemon is out of pokebal. if not, use revive and summon it //sync function
               fPkmSummoned = bl.isPlayerPkmSummoned();
               if(fPkmSummoned.status == "1" && fRevive === 1){
-                bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
+                bl.revivePkm();
               }
               //IF pause is not requested, continue Fishing
               //restart fishing after some time (this time is necessary:
@@ -310,16 +343,21 @@ function startFishing(){
               //"available to fish here"
               setTimeout(startFishing, 1000);
             }); //keyboard. CTRLZ 2
+          }else{
+            console.log("Fishing finished");
+            divFishing.style.background = 'linear-gradient(red, #774247)';
           }
 
         }); //mouse.getColorFishing
 
       }else{
         //test if player's pokemon is out of pokebal.. if not use revive and summon it //sync function
+        /*
         fPkmSummoned = bl.isPlayerPkmSummoned();
         if(fPkmSummoned.status == "1" && fRevive === 1){
-          bl.revivePkm(pos.pkmSlot, pos.reviveSlot);
+          bl.revivePkm();
         }
+        */
 
         console.log("fish restarting");
         setTimeout(startFishing, 1000);
@@ -371,7 +409,7 @@ async function lookForFighting(){
           }else{
             //check if pokemon is near/close
             console.log(`1- checking if ${battlePokelist[iBl].name} is near`);
-            const res = bl.isPkmNearSync(battlePokelist[iBl].addr);
+            let res = bl.isPkmNearSync(battlePokelist[iBl].addr);
             if(res.isNear){
               //:TODO add a check inside of isPkmNear to see if pkm was rly clicked, if not try again.
               //attack and just return after pokemon is dead
@@ -478,4 +516,17 @@ function updateScreenCoords(res){
 
   bl.setScreenConfig(center, sqm, function(){
   });
+}
+
+function sleep(ms){
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function sleepFor(ms){
+  console.log(`sleep For started ${ms}`);
+  await sleep(ms);
+  console.log(`sleepFor finished ${ms}`);
+  if(fPause){
+    sleepFor(ms);
+  }
 }

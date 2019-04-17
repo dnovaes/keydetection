@@ -16,11 +16,73 @@ body{
 }
 
 .content{
+  -webkit-app-region: no-drag;
+}
+
+#main-screen .content{
   width: 305px;
   height: auto;
   padding-top: 10px;
   padding-right: 30px;
   margin-left: 172px;
+}
+
+#main-screen .next-options{
+  -webkit-app-region: no-drag;
+  background: linear-gradient(#774247, red);
+  color: white;
+  width: 15px;
+  height: 26px;
+  border-radius: 10px;
+  line-height: 27px;
+  text-align: center;
+  border: 1px solid transparent;
+}
+
+.next-options:hover{
+  cursor: pointer;
+  border: 1px solid white;
+  background: linear-gradient(red, #774247);
+}
+
+.next-options:hover:after{
+	animation: blink .6s alternate infinite;
+}
+
+.next-options#nextToMenu2{
+  position: absolute;
+  top: 140px;
+  right: 10px;
+}
+
+.next-options#nextToMenu1{
+  position: absolute;
+  top: 140px;
+}
+
+.next-options#nextToMenu2::after{
+  content: "\f054";
+  font-family: FontAwesome;
+  font-style: normal;
+  font-weight: normal;
+  text-decoration: inherit;
+}
+
+.next-options#nextToMenu1::after{
+  content: "\f053";
+  font-family: FontAwesome;
+  font-style: normal;
+  font-weight: normal;
+  text-decoration: inherit;
+}
+
+@keyframes blink {
+  from { 
+    color: white;
+  }
+  to   { 
+    color: transparent;
+  }
 }
 
 @font-face{
@@ -53,6 +115,19 @@ body{
   top: 107px;
 }
 
+#close-icon{
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 13px;
+  height: 13px;
+  background-image: url("../img/close_red.png");
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0.8;
+  cursor:pointer;
+}
+
 #fishing span{
   background-image: url(../img/super_rod.png);
   background-repeat: no-repeat;
@@ -71,6 +146,15 @@ body{
   background-size: contain;
 }
 
+.menu-1{
+  height: 150px;
+}
+
+.menu-2{
+  height: 150px;
+  display: none;
+}
+
 .menu-item{
   -webkit-app-region: no-drag;
   width: 200px;
@@ -78,7 +162,7 @@ body{
   background: linear-gradient(#774247, red);
   border-radius: 10px;
   cursor: pointer;
-  margin: 8px auto 0px auto;
+  margin: 8px auto 8px auto;
   border: 1px solid transparent;
 }
 
@@ -125,7 +209,7 @@ body{
 
 .menu-item-small > .text{
   width: 130px;
-  height: 50px;
+  /*height: 50px;*/
 
   color: white;
   font-family: pokemonh;
@@ -151,10 +235,12 @@ body{
 }
 
 #caveBot span{
-  width:65px;
-  height: 45px;
-  background-image: url("../img/red_champion.png");
+  width: 64px;
+  height: 41px;
+  background-image: url(../img/red_champion.png);
   background-size: cover;
+  transform: scale(0.8);
+  margin-top: -2px;
 }
 
 .clear-float{
@@ -218,8 +304,109 @@ body{
 }
 
 /*
+ * Challenge Screen
+*/
+
+#challenge-screen{
+  -webkit-app-region: no-drag;
+  display: none;
+  width: 450px;
+  height: 180px;
+  color: white;
+  padding: 5px;
+}
+
+/*
+#pokeaddress{
+  width: 100px;
+  padding: 5px;
+  border-radius: 5px;
+  height: 15px;
+  font-size: 15px;
+  color: red;
+}
+*/
+
+#btUnown, #btIllusion{
+  border-radius: 5px;
+  width: 105px;
+  height: 25px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.unownel span{
+  color: greenyellow;
+  font-weight: bold;
+  font-size: 17px;
+  margin-left: 10px;
+  text-transform: uppercase;
+}
+
+.unownel{
+  padding: 5px 0px;
+}
+
+/*
  *
- * Cave bot part
+ * Hotkey Config section
+ *
+*/
+
+#hk-screen > *{
+  color: white;
+}
+
+#hk-screen{
+  margin: 0 auto;
+  max-width: 500px;
+  height: 190px;
+  display: none;
+}
+
+#hk-screen .content{
+  padding: 20px;
+}
+
+.divHotkey > *{
+  -webkit-app-region:no-drag;
+}
+
+.divHotkey{
+  font-size: 20px;
+  font-family: fantasy;
+  height: 25px;
+  line-height: 40px;
+  vertical-align: middle;
+  float: left;
+  width: 440px;
+}
+
+.divHotkey button{
+  width: 70px;
+  float: left;
+  margin-right: 5px;
+  border-radius: 5px;
+  font-family: serif;
+}
+
+.divHotkey input[type="checkbox"]{
+  width: 20px;
+  height: 20px;
+  margin: 0px;
+  float: left;
+}
+
+.divHotkey label{
+  display: block;
+  float: left;
+  margin-top: -10px;
+  margin-left: 5px;
+}
+
+/*
+ *
+ * Cave bot section
  *
 */
 
@@ -230,7 +417,7 @@ body{
 #cave-screen{
   margin: 0 auto;
   max-width: 500px;
-  height: 190px;
+  /*height: 190px;*/
   display: none;
 }
 
@@ -258,12 +445,13 @@ body{
   height: 100%;
 }
 
-#footer{
+.footer{
   position: absolute;
   bottom: 0;
   width: 100%;
   height: 20px;
   margin-bottom: 10px;
+  color: white;
 }
 
 select > *{
@@ -304,7 +492,7 @@ select{
       font-weight: bold;
       border: 1px solid white;}
 
-.menu-icon{
+.btVoltar{
   -webkit-app-region: no-drag;
   position: relative;
   width: 20px;
@@ -312,7 +500,7 @@ select{
   cursor: pointer;
 }
 
-.menu-icon:before{
+.btVoltar:before{
   content: "\f060";
   font-family: FontAwesome;
   font-style: normal;
@@ -327,7 +515,7 @@ ul {
   list-style-type: none;
   margin: 0;
   padding: 0;
-  height: 125px;
+  height: 150px;
   width: 95%;
   overflow-y: scroll;
   overflow-x: hidden;
@@ -375,12 +563,13 @@ li:last-child {
 }
 
 
-.features{
+.functions{
   -webkit-app-region: no-drag;
   float: left;
+  height: 100%;
 }
 
-.features .feature-el{
+.functions .function-el{
   width: 40px;
   height: 40px;
   cursor: pointer;
@@ -388,11 +577,11 @@ li:last-child {
   border: 1px solid transparent;
 }
 
-.features div:hover{
+.functions div:hover{
   border: 1px solid white;
 }
 
-.features div:active{
+.functions div:active{
   border: 1px solid red;
 }
 
@@ -408,8 +597,14 @@ li:last-child {
   background-position: center;
 }
 
-#keyboard{
+#btHotkey{
   background: url("../img/keyboard.png") no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+
+#btRevive{
+  background: url("../img/revive.png") no-repeat;
   background-size: contain;
   background-position: center;
 }
@@ -428,6 +623,30 @@ li:last-child {
 
 #sleep{
   background: url("../img/timer.png") no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+
+#btLogon{
+  background: url("../img/logon.png") no-repeat;
+  background-size: contain;
+  background-position: center;
+  transform: scale(0.85);
+  /*
+  width: 31px;
+  margin-left: 4px;
+  height: 35px;
+  */
+}
+
+#btBackPkm{
+  background: url("../img/pokeball_back.png") no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+
+#btSummonPkm{
+  background: url("../img/pokeball_summon.png") no-repeat;
   background-size: contain;
   background-position: center;
 }
@@ -506,6 +725,15 @@ li:last-child {
   .prompt input:focus{
     border: 2px solid #f7e53f;
     outline: 0;}
+  .prompt .setKey{
+    width: 85px;
+    height: 30px;
+    border-radius: 5px;
+    font-family: serif;
+    font-size: 15px;
+    margin-left: 85px;
+    margin-top: 20px;
+  }
 
 .prompt .btConfirm{
   -webkit-app-region: no-drag;
@@ -560,7 +788,8 @@ li:last-child {
   margin-top: -4px;
 }
 
-button.clickType{
+button.clickType,
+.lock-el button{
   width: 100px;
   height: 25px;
   line-height: 13px;
@@ -572,7 +801,8 @@ button.clickType{
   font-weight: bold;
 }
 
-button.clickType:hover{
+button.clickType:hover,
+.lock-el button:hover{
   background-color: #f7e53f;
   color: black;
 }

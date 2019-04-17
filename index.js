@@ -8,16 +8,21 @@ let win
 
 function createWindow () {
   // Create the browser window. backgroundThrottling: false
-  win = new BrowserWindow({width: 460, height: 310, frame: false, resizable: false })
+  //win = new BrowserWindow({width: 460, height: 310, frame: false, resizable: false })
+  win = new BrowserWindow({width: 500, height: 350, frame: false, resizable: false })
   win.setMenu(null);
 
   // and load the index.html of the app.
   win.loadURL(url.format({
-    pathname: path.join(__dirname, 'view/login.html'),
+    //pathname: path.join(__dirname, 'view/login.html'),
+    pathname: path.join(__dirname, 'view/index.html'),
     protocol: 'file:',
     slashes: true
   }))
-  win.show();
+
+  win.once('ready-to-show', () => {
+    win.show();
+  })
 
   // Open the DevTools.
   //win.webContents.openDevTools()

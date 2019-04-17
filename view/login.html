@@ -85,6 +85,13 @@
 
       let username = document.querySelector("#login_username input").value;
       let password = document.querySelector("#login_pass input").value;
+/*    
+      password = "1234"
+      let hash = crypto.createHash('sha256');
+      password = hash.update(password).digest('hex').toString();
+      console.log(password);
+      exit();
+*/
 
       if(username == "" || password == ""){
         alert("Preencha todos os campos");
