@@ -9,7 +9,14 @@ let win
 function createWindow () {
   // Create the browser window. backgroundThrottling: false
   //win = new BrowserWindow({width: 460, height: 310, frame: false, resizable: false })
-  win = new BrowserWindow({width: 500, height: 350, frame: false, resizable: false })
+  win = new BrowserWindow({
+    width: 500, height: 350, frame: false, resizable: false,
+    webPreferences:{
+      nodeIntegration: true,
+      preload: './bot.js',
+      contextIsolation: false
+    }
+  })
   win.setMenu(null);
 
   // and load the index.html of the app.
@@ -25,7 +32,7 @@ function createWindow () {
   })
 
   // Open the DevTools.
-  //win.webContents.openDevTools()
+  win.webContents.openDevTools()
 
   // Emitted when the window is closed.
   win.on('closed', () => {
