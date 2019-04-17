@@ -1,5 +1,5 @@
 {
-  "name": "bobitosbot",
+  "name": "RazerMouseB",
   "version": "1.0.0",
   "description": "A companion for your PXG",
   "main": "index.js",
@@ -7,8 +7,8 @@
     "async-lock": "^1.0.0"
   },
   "devDependencies": {
-    "electron-rebuild": "^1.7.3",
-    "electron": "^1.8.4"
+    "electron": "^1.8.8",
+    "electron-rebuild": "^1.8.4"
   },
   "scripts": {
     "start": "electron .",
