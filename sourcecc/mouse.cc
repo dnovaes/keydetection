@@ -174,7 +174,7 @@ static void getColorFishing(uv_work_t *req){
   //SetCursorPos(work->pos.x, work->pos.y);
   x = work->pos.x;
   y = work->pos.y;
-  Sleep(4000);
+  Sleep(2000);
 
   //HWND hDesktopWnd = GetDesktopWindow();
   //GetWindowRect(hDesktopWnd, &rect);
