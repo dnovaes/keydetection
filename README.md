@@ -43,9 +43,6 @@ git clone this project and install dependencies
 ```
 git clone https://github.com/dnovaes/keydetection.git
 cd keydetection/
-npm install electron --save
-npm install electron-rebuild --save-dev
-npm install node-gyp --save-dev
 npm install
 ```
 
@@ -55,7 +52,7 @@ native modules (C++ in this case). And start the application.
 npm run build
 npm start
 ```
-or run, if the code above didnt work:
+or run, if the code above didnt work, the following commands:
 ```
 ./node_modules/.bin/electron-rebuild.cmd
 npm start
@@ -119,15 +116,6 @@ electron-packager ./ BobitoBot --platform=win32 --arch=x64 --asar
 if using windows 32bits on host
 electron-packager ./ BobitoBot --platform=win32 --arch=ia32 --asar --prune=true
 ```
-
-## Resources for Learning Electron
-
-- [electron.atom.io/docs](http://electron.atom.io/docs) - all of Electron's documentation
-- [electron.atom.io/community/#boilerplates](http://electron.atom.io/community/#boilerplates) - sample starter apps created by the community
-- [electron/electron-quick-start](https://github.com/electron/electron-quick-start) - a very basic starter Electron app
-- [electron/simple-samples](https://github.com/electron/simple-samples) - small applications with ideas for taking them further
-- [electron/electron-api-demos](https://github.com/electron/electron-api-demos) - an Electron app that teaches you how to use Electron
-- [hokein/electron-sample-apps](https://github.com/hokein/electron-sample-apps) - small demo apps for the various Electron APIs
 
 ## License
 
