@@ -2105,7 +2105,7 @@ void sendRightClickToGamePos(Coords targetPos, Coords playerPos){
   printf("center: %d, %d\n", center.x, center.y);
 
   if(sqmDiffX>6){sqmDiffX = 6;}
-  if(sqmDiffY>4){sqmDiffX = 5;}
+  if(sqmDiffY>4){sqmDiffY = 5;}
 
   targetScreenPos.x = center.x + (sqmDiffX*(sqm.x));
   targetScreenPos.y = center.y + (sqmDiffY*(sqm.y));
@@ -2142,7 +2142,7 @@ void sendClickToGamePos(Coords targetPos, Coords playerPos){
   printf("center: %d, %d\n", center.x, center.y);
 
   if(sqmDiffX>6){sqmDiffX = 6;}
-  if(sqmDiffY>4){sqmDiffX = 5;}
+  if(sqmDiffY>4){sqmDiffY = 5;}
 
   targetScreenPos.x = center.x + (sqmDiffX*(sqm.x));
   targetScreenPos.y = center.y + (sqmDiffY*(sqm.y));
