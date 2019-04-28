@@ -111,10 +111,10 @@ Go to source project folder and run:
 
 ```
 if using windows 64bits on host:
-electron-packager ./ BobitoBot --platform=win32 --arch=x64 --asar
+electron-packager ./ AppName --platform=win32 --arch=x64 --asar
 
 if using windows 32bits on host
-electron-packager ./ BobitoBot --platform=win32 --arch=ia32 --asar --prune=true
+electron-packager ./ AppName --platform=win32 --arch=ia32 --asar --prune=true
 ```
 
 ## License
