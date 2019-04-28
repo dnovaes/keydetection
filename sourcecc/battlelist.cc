@@ -162,6 +162,8 @@ void pause();
 void swapPokemon();
 void revivePokemon();
 void dragItemtoBellow();
+// Util Functions
+Coords getGameTargetPos(Coords targetPos, Coords playerPos);
 
 //const
 
@@ -1547,6 +1549,32 @@ void revivePokemon(){
   SendInput(2, input2, sizeof(INPUT));
 }
 
+Coords getGameTargetPos(Coords targetPos, Coords playerPos){
+  int sqmDiffX, sqmDiffY; 
+  Coords targetScreenPos;
+
+  sqmDiffX = targetPos.x - playerPos.x;
+  sqmDiffY = targetPos.y - playerPos.y;
+  printf("sqmDiff: %d, %d\n", sqmDiffX, sqmDiffY);
+  printf("center: %d, %d\n", center.x, center.y);
+
+  if(sqmDiffX>7){
+    sqmDiffX = 7;
+  }else if(sqmDiffX<-7){
+    sqmDiffX = -7;
+  }
+
+  if(sqmDiffY>5){
+    sqmDiffY = 5;
+  }else if(sqmDiffY<-5){
+    sqmDiffY = -5;
+  }
+
+  targetScreenPos.x = center.x + (sqmDiffX*(sqm.x));
+  targetScreenPos.y = center.y + (sqmDiffY*(sqm.y));
+  return targetScreenPos;
+}
+
 void swapPokemon(){
   INPUT input, input2[2];
 
@@ -2018,20 +2046,10 @@ Coords getPlayerPosC(){
 void  tossBallToPokemon(Coords targetPos, Coords playerPos){
 
   //convert GamePos to ScreenPos
-  int sqmDiffX, sqmDiffY; 
-  POINT targetScreenPos;
+  Coords targetScreenPos;
   INPUT input, input2[2];
 
-  sqmDiffX = targetPos.x - playerPos.x;
-  sqmDiffY = targetPos.y - playerPos.y;
-  printf("sqmDiff: %d, %d\n", sqmDiffX, sqmDiffY);
-  printf("center: %d, %d\n", center.x, center.y);
-
-  if(sqmDiffX>6){sqmDiffX = 6;}
-  if(sqmDiffY>4){sqmDiffX = 5;}
-
-  targetScreenPos.x = center.x + (sqmDiffX*(sqm.x));
-  targetScreenPos.y = center.y + (sqmDiffY*(sqm.y));
+  targetScreenPos = getGameTargetPos(targetPos, playerPos);
 
   printf("capturing pokemon on pos: %d, %d (CurrentPos: %d, %d), (Tossing ball to pos: %d, %d)\n\n", targetScreenPos.x, targetScreenPos.y, playerPos.x, playerPos.y, targetPos.x, targetPos.y);
 
@@ -2095,22 +2113,12 @@ void  tossBallToPokemon(Coords targetPos, Coords playerPos){
 }
 void sendRightClickToGamePos(Coords targetPos, Coords playerPos){
   //convert GamePos to ScreenPos
-  int sqmDiffX, sqmDiffY; 
-  POINT targetScreenPos;
+  Coords targetScreenPos;
   INPUT input;
 
-  sqmDiffX = targetPos.x - playerPos.x;
-  sqmDiffY = targetPos.y - playerPos.y;
-  printf("sqmDiff: %d, %d\n", sqmDiffX, sqmDiffY);
-  printf("center: %d, %d\n", center.x, center.y);
+  targetScreenPos = getGameTargetPos(targetPos, playerPos);
 
-  if(sqmDiffX>6){sqmDiffX = 6;}
-  if(sqmDiffY>4){sqmDiffY = 5;}
-
-  targetScreenPos.x = center.x + (sqmDiffX*(sqm.x));
-  targetScreenPos.y = center.y + (sqmDiffY*(sqm.y));
-
-  printf("Sending click to screenPos: %d, %d (CurrentPos: %d, %d), (Going to: %d, %d)\n\n", targetScreenPos.x, targetScreenPos.y, playerPos.x, playerPos.y, targetPos.x, targetPos.y);
+  printf("Sending Right click to screenPos: %d, %d (CurrentPos: %d, %d), (Going to: %d, %d)\n\n", targetScreenPos.x, targetScreenPos.y, playerPos.x, playerPos.y, targetPos.x, targetPos.y);
 
   SetCursorPos(targetScreenPos.x, targetScreenPos.y);
 
@@ -2132,22 +2140,12 @@ void sendRightClickToGamePos(Coords targetPos, Coords playerPos){
 }
 void sendClickToGamePos(Coords targetPos, Coords playerPos){
   //convert GamePos to ScreenPos
-  int sqmDiffX, sqmDiffY; 
-  POINT targetScreenPos;
+  Coords targetScreenPos;
   INPUT input;
 
-  sqmDiffX = targetPos.x - playerPos.x;
-  sqmDiffY = targetPos.y - playerPos.y;
-  printf("sqmDiff: %d, %d\n", sqmDiffX, sqmDiffY);
-  printf("center: %d, %d\n", center.x, center.y);
+  targetScreenPos = getGameTargetPos(targetPos, playerPos);
 
-  if(sqmDiffX>6){sqmDiffX = 6;}
-  if(sqmDiffY>4){sqmDiffY = 5;}
-
-  targetScreenPos.x = center.x + (sqmDiffX*(sqm.x));
-  targetScreenPos.y = center.y + (sqmDiffY*(sqm.y));
-
-  printf("Sending click to screenPos: %d, %d (CurrentPos: %d, %d), (Going to: %d, %d)\n\n", targetScreenPos.x, targetScreenPos.y, playerPos.x, playerPos.y, targetPos.x, targetPos.y);
+  printf("Sending Left Click to screenPos: %d, %d (CurrentPos: %d, %d), (Going to: %d, %d)\n\n", targetScreenPos.x, targetScreenPos.y, playerPos.x, playerPos.y, targetPos.x, targetPos.y);
 
   SetCursorPos(targetScreenPos.x, targetScreenPos.y);
 
@@ -2859,6 +2857,7 @@ static void runCyberScript(uv_work_t *req){
   checkSummonPkm(handle, 1);
 
   //Move player back to certain position
+  printf("\nSend click movement to specific position [C.O Cyber]\n");
   playerPos = getPlayerPosC();
   targetPos.x = 4289;
   targetPos.y = 3615;
