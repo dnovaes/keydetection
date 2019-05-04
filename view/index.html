@@ -243,6 +243,7 @@
     btRevive = document.querySelector("#btRevive");
     btLogon = document.querySelector("#btLogon");
     btSummonPkm = document.querySelector("#btSummonPkm");
+    btBattle = document.querySelector("#battle");
     btBackPkm = document.querySelector("#btBackPkm");
     hkRevive = document.querySelector("#hkRevive");
     hkChangePkm = document.querySelector("#hkChangePkm");
@@ -368,38 +369,44 @@
           newCommand.dataset.cmdType = obj.content[i].cmdType;
           switch(newCommand.dataset.cmdType){
             case 'check':
-              newCommand.innerHTML = `<div class="sel-text">${obj.content[i].pos[0]},${obj.content[i].pos[1]},${obj.content[i].pos[2]}</div><div class="remove-el"></div>`;
+              textCommand = `${obj.content[i].pos[0]},${obj.content[i].pos[1]},${obj.content[i].pos[2]}`
               break;
             case 'sleep':
               newCommand.dataset.value = obj.content[i].value;
-              newCommand.innerHTML = `<div class="sel-text">Sleep for ${obj.content[i].value/1000}s</div><div class="remove-el"></div>`;
+              textCommand = `Sleep for ${obj.content[i].value/1000}s`
               break;
             case 'mouseclick':
               newCommand.dataset.clickType = obj.content[i].clickType;
               newCommand.dataset.posx = obj.content[i].pos[0];
               newCommand.dataset.posy = obj.content[i].pos[1];
-              newCommand.innerHTML = `<div class="sel-text">${obj.content[i].clickType}click (${obj.content[i].pos[0]}, ${obj.content[i].pos[1]}) </div><div class="remove-el"></div>`;
+              textCommand = `${obj.content[i].clickType}click (${obj.content[i].pos[0]}, ${obj.content[i].pos[1]})`
               break;
             case 'hotkey':
               newCommand.dataset.key = obj.content[i].key;
               newCommand.dataset.value = obj.content[i].value;
-              newCommand.innerHTML = `<div class="sel-text">use Hotkey "${obj.content[i].key}"</div><div class="remove-el"></div>`;
+              textCommand = `Use Hotkey: ${obj.content[i].key}`
               break;
             case 'login':
-              newCommand.innerHTML = `<div class="sel-text">Login</div><div class="remove-el"></div>`;
+              textCommand = `Login`
               break;
             case 'logoff':
-              newCommand.innerHTML = `<div class="sel-text">Logoff</div><div class="remove-el"></div>`;
+              textCommand = `Logoff`
               break;
             case "summonPkm":
               textCommand = `Pkm Go`;
-              newCommand.innerHTML = `<div class="sel-text">${textCommand}</div><div class="remove-el"></div>`;
               break;
             case "backPkm":
               textCommand = `Pkm Back`;
-              newCommand.innerHTML = `<div class="sel-text">${textCommand}</div><div class="remove-el"></div>`;
+              break;
+            case "targetPkm":
+              textCommand = `Target Specific Pkm`;
+              break;
+            default:
+              textCommand = newCommand.dataset.cmdType
+              console.log(`default chosen: ${textCommand}`)
               break;
           }
+          newCommand.innerHTML = `<div class="sel-text">${textCommand}</div><div class="remove-el"></div>`;
           newCommand.addEventListener("click", highlightCommand);
           newCommand.children[1].addEventListener("click", removeCommandEl);
           listCommands.appendChild(newCommand);
@@ -435,9 +442,6 @@
             obj.content[i].key= listCommands.children[i].dataset.key;
             obj.content[i].value = listCommands.children[i].dataset.value;
             break;
-          default:
-            console.log("default choosen");
-            break;
         }
       }
       console.log(obj);
@@ -464,6 +468,9 @@
           break;
         case "backPkm":
           textCommand = `Pkm Back`;
+          break;
+        case "targetPkm":
+          textCommand = `Target Specfic Pkm`;
           break;
       }
       newCommand.innerHTML = `<div class="sel-text">${textCommand}</div><div class="remove-el"></div>`;
@@ -726,6 +733,10 @@
       }
 
     });
+
+    btBattle.addEventListener("click", function(){
+      addCommandToProfile(`targetPkm`)
+    })
 
     btSummonPkm.addEventListener("click", function(){
       if(!lockFlag){

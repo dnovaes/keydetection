@@ -2245,6 +2245,7 @@ static void runProfile(uv_work_t *req){
   fPause = FALSE; //flag mark that indicates if bot is paused
   int fcheck = 0;
   BYTE fLogged = 0;
+  DWORD_PTR baseaddr;
 
   INPUT input2[2];
   HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
@@ -2507,6 +2508,25 @@ static void runProfile(uv_work_t *req){
         checkSummonPkm(handle, 1);
       }else if(strcmp(cProfile->commands[i].cmdType, "backPkm") == 0){
         checkSummonPkm(handle, 0);
+      }else if(strcmp(cProfile->commands[i].cmdType, "targetPkm") == 0){
+        do{
+          printf("Trying to select the target pkm...\n");
+          targetPos = getTargetPkmPos(handle);
+
+          printf("Pkm target found. Pos x: %d, y: %d\n", targetPos.x, targetPos.y);
+
+          playerPos = getPlayerPosC();
+          sendRightClickToGamePos(targetPos, playerPos);
+
+          Sleep(150);
+
+          //check again if pkm is summoned
+          checkSummonPkm(handle, 1);
+
+          //check if target is selected
+          ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_TARGET_SELECT), &baseaddr, 4, NULL);
+        //it will continue runnning until target is selected, cavebot finish or pause detected
+        }while((baseaddr == 0)&&(fCaveBot)&&(!fPause));
       }
     }
   }
@@ -2550,7 +2570,7 @@ void runProfileAsync(const FunctionCallbackInfo<Value>& args){
   WorkProfile* work = new WorkProfile();
   work->request.data = work;
 
-  //Mapping JavaScript object to C++ class
+  //Mapping Js object to C++ class
   Local<Object> obj = args[0]->ToObject();
 
   Local<Value> fileNameValue = obj->Get(String::NewFromUtf8(isolate, "fileName"));
