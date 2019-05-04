@@ -2769,7 +2769,7 @@ static void runCyberScript(uv_work_t *req){
 
     //check if target is selected
     ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_TARGET_SELECT), &baseaddr, 4, NULL);
-  }while((baseaddr == 0)&&(fCaveBot));
+  }while((baseaddr == 0)&&(fCaveBot)&&(!fPause));
   printf("Target Pkm selected.\n");
 
 
