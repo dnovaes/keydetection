@@ -566,7 +566,9 @@ li:last-child {
 .functions{
   -webkit-app-region: no-drag;
   float: left;
-  height: 100%;
+  width: 150px;
+  height: 150px;
+  overflow-y: auto;
 }
 
 .functions .function-el{
