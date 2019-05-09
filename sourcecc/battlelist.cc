@@ -169,32 +169,29 @@ Coords getGameTargetPos(Coords targetPos, Coords playerPos);
 
 /* DIRECTX9 */
 //global allocations (with AOB injection)
-const DWORD_PTR BASEADDR_CREATURE_GENERATOR = 0x047C0000; //_creatureBase
 //code cave with fixed address of the game
-const DWORD_PTR BASEADDR_CREATURE_GEN       = 0x00719001; //space in memory to copy and reference _creatureBase
-const DWORD_PTR BASEADDR_CREATURE_COUNTER   = 0x00719005;
+const DWORD_PTR BASEADDR_CREATURE_GEN       = 0x0071A3C5; //space in memory to copy and reference _creatureBase
+const DWORD_PTR BASEADDR_CREATURE_COUNTER   = 0x0071A3C9;
 // base address pkm disappear from window
-const DWORD_PTR BASEADDR_DISAPPEAR          = 0x00719021;
-const DWORD_PTR BASEADDR_DISAPPEAR_POSX     = 0x00719025;
-const DWORD_PTR BASEADDR_DISAPPEAR_POSY     = 0x00719029;
+const DWORD_PTR BASEADDR_DISAPPEAR          = 0x0071A3D9;
+const DWORD_PTR BASEADDR_DISAPPEAR_POSX     = 0x0071A3DD;
+const DWORD_PTR BASEADDR_DISAPPEAR_POSY     = 0x0071A3E1;
 const DWORD_PTR OFFSET_DISAPPEAR_LIFE       = 0x38;
 //wanted wild pokemon (Cyber)
-const DWORD_PTR BASEADDR_WANTED             = 0x0071902D;
-const DWORD_PTR BASEADDR_WANTED_POSX        = 0x00719031;
-const DWORD_PTR BASEADDR_WANTED_POSY        = 0x00719035;
+const DWORD_PTR BASEADDR_WANTED             = 0x0071A3CD;
+const DWORD_PTR BASEADDR_WANTED_POSX        = 0x0071A3CD+0x4;
+const DWORD_PTR BASEADDR_WANTED_POSY        = 0x0071A3CD+0x8;
 const DWORD_PTR OFFSET_WANTED_LIFE          = 0x38;
 //Player's pokemon position
-const DWORD_PTR BASEADDR_PLAYER_PKM         = 0x007190C2;
-const DWORD_PTR BASEADDR_PLAYER_PKM_POSX    = 0x007190C2+0x4;
-const DWORD_PTR BASEADDR_PLAYER_PKM_POSY    = 0x007190C2+0x8;
-const DWORD_PTR BASEADDR_PLAYER_PKM_NAME    = 0x007190C2+0x12;
+const DWORD_PTR BASEADDR_PLAYER_PKM         = 0x0;
+const DWORD_PTR BASEADDR_PLAYER_PKM_POSX    = 0x0+0x4;
+const DWORD_PTR BASEADDR_PLAYER_PKM_POSY    = 0x0+0x8;
+const DWORD_PTR BASEADDR_PLAYER_PKM_NAME    = 0x0+0x12;
+//uses moduleAddress as base (4 bytes)
+const DWORD_PTR OFFSET_PLAYER_POSX          = 0x394840;
+const DWORD_PTR OFFSET_PLAYER_POSY          = 0x394844;
+const DWORD_PTR OFFSET_PLAYER_POSZ          = 0x394848; //1 byte is enough here
 
-//adress for position change (writes into pokemon pos. when something moves in screen)
-//const DWORD_PTR INSTR_POSADDR               = 0x1461A4; 
-//use moduleAddress as base (4 bytes)
-const DWORD_PTR OFFSET_PLAYER_POSX          = 0x393840;
-const DWORD_PTR OFFSET_PLAYER_POSY          = 0x393844;
-const DWORD_PTR OFFSET_PLAYER_POSZ          = 0x393848; //1 byte is enough here
 //use creatureAddress Name as base
 const DWORD_PTR OFFSET_PKM_NAME_LENGTH      = 0x24; //byte
 const DWORD_PTR OFFSET_PKM_NAME             = 0x28;
@@ -216,31 +213,19 @@ const DWORD_PTR OFFSET_BLCOUNT_P3           = 0x30;
 const DWORD_PTR BASEADDR_FISHING            = 0x0039283C;
 const DWORD_PTR OFFSET_FISHING_P1           = 0x54;
 const DWORD_PTR OFFSET_FISHING_P2           = 0x4;
-//pointer to player's pokemon summoned status address
-const DWORD_PTR BASEADDR_PLAYER_PKM_SUMMON  = 0X0038F470;
-const DWORD_PTR OFFSET_PLAYER_PKM_SUMMON_P1 = 0x104;
-const DWORD_PTR OFFSET_PLAYER_PKM_SUMMON_P2 = 0x54;
-const DWORD_PTR OFFSET_PLAYER_PKM_SUMMON_P3 = 0x1C;
-const DWORD_PTR OFFSET_PLAYER_PKM_SUMMON_P4 = 0x304;
-//pointer to container moveset
-const DWORD_PTR BASEADDR_MOVESET  = 0x0;
-const DWORD_PTR OFFSET_MOVESET_P1 = 0x0;
-const DWORD_PTR OFFSET_MOVESET_P2 = 0x0;
-const DWORD_PTR OFFSET_MOVESET_P3 = 0x0;
-const DWORD_PTR OFFSET_MOVESET_X  = 0x0;
-const DWORD_PTR OFFSET_MOVESET_Y  = 0x0;
+
 //Logged in status
-const DWORD_PTR BASEADDR_LOGGEDIN = 0x00393360;
+const DWORD_PTR BASEADDR_LOGGEDIN = 0x00393361;
 //Game Window
-const DWORD_PTR BASEADDR_GAMESCREEN = 0x0031900B;
-const DWORD_PTR BASEADDR_GAMESCREEN_HEIGHT = 0x00319007;
-const DWORD_PTR OFFSET_GAMESCREEN_HEIGHT_WIDTH = 0x4;
-const DWORD_PTR OFFSET_GAMESCREEN_X= 0x0;
-const DWORD_PTR OFFSET_GAMESCREEN_Y= 0x4;
-//Summon status
-const DWORD_PTR BASEADDR_SUMMONSTATUS = 0x0031900F; //byte 0/1
-//Address containing adress of selected creature (target)
-const DWORD_PTR BASEADDR_TARGET_SELECT = 0x393324;
+const DWORD_PTR BASEADDR_GAMESCREEN             = 0x0031A3ED;
+const DWORD_PTR BASEADDR_GAMESCREEN_HEIGHT      = 0x0031A3E9;
+const DWORD_PTR OFFSET_GAMESCREEN_HEIGHT_WIDTH  = 0x4;
+const DWORD_PTR OFFSET_GAMESCREEN_X             = 0x0;
+const DWORD_PTR OFFSET_GAMESCREEN_Y             = 0x4;
+//Summon Status
+const DWORD_PTR BASEADDR_SUMMONSTATUS = 0x0031A3F1; //byte 0/1
+//Target Status  (Address containing address of targetted creature (target address))
+const DWORD_PTR BASEADDR_TARGET_SELECT = 0x394324; //target adress or 0
 
 DWORD_PTR dwGetModuleBaseAddress(DWORD pid, TCHAR *szModuleName)
 {
@@ -1243,29 +1228,6 @@ void isPkmNearSync(const FunctionCallbackInfo<Value>& args){
   args.GetReturnValue().Set(obj);
 }
 
-void isPlayerPkmSummonedSync(const FunctionCallbackInfo<Value>& args){
-  Isolate* isolate = args.GetIsolate();
-
-  DWORD address;
-  int statusSummoned;
-
-  HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
-
-  ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_PLAYER_PKM_SUMMON), &address, sizeof(DWORD), NULL);
-  ReadProcessMemory(handle, (LPDWORD)(address+OFFSET_PLAYER_PKM_SUMMON_P1), &address, sizeof(DWORD), NULL);
-  ReadProcessMemory(handle, (LPDWORD)(address+OFFSET_PLAYER_PKM_SUMMON_P2), &address, sizeof(DWORD), NULL);
-  ReadProcessMemory(handle, (LPDWORD)(address+OFFSET_PLAYER_PKM_SUMMON_P3), &address, sizeof(DWORD), NULL);
-  ReadProcessMemory(handle, (LPDWORD)(address+OFFSET_PLAYER_PKM_SUMMON_P4), &statusSummoned, 4, NULL);
-
-  CloseHandle(handle);
-
-  Local<Object> obj = Object::New(isolate);
-  obj->Set(String::NewFromUtf8(isolate, "status"), Number::New(isolate, statusSummoned));
-  Handle<Value> argv[] = {obj};
-
-  args.GetReturnValue().Set(obj);
-}
-
 void dragItemtoBellow(){
   INPUT input, input2[2];
 
@@ -1385,7 +1347,7 @@ Coords getTargetPkmPos(HANDLE handle){
 
     ReadProcessMemory(handle, (LPDWORD)(BASEADDR_WANTED_POSY), &baseaddr, 4, NULL); 
     ReadProcessMemory(handle, (LPDWORD)(baseaddr), &targetPkmPos.y, 4, NULL);
-  }while(targetPkmPos.x > 65534 || targetPkmPos.x <=0);
+  }while(targetPkmPos.x >= 65535 || targetPkmPos.x <=0);
 
   return targetPkmPos;
 }
@@ -2244,6 +2206,9 @@ static void runProfile(uv_work_t *req){
   //reset fPause to unpaused before start this cavebot
   fPause = FALSE; //flag mark that indicates if bot is paused
   int fcheck = 0;
+  int i;
+  int hks[10]; //f1 - f10
+  BYTE prevTargetPkmLife, curTargetPkmLife;
   BYTE fLogged = 0;
   DWORD_PTR baseaddr;
 
@@ -2527,6 +2492,101 @@ static void runProfile(uv_work_t *req){
           ReadProcessMemory(handle, (LPDWORD)(moduleAddr+BASEADDR_TARGET_SELECT), &baseaddr, 4, NULL);
         //it will continue runnning until target is selected, cavebot finish or pause detected
         }while((baseaddr == 0)&&(fCaveBot)&&(!fPause));
+      }else if(strcmp(cProfile->commands[i].cmdType, "getLoot") == 0){
+        //Take loot of the wild Pokemon
+        //TargetPkm = Corpse Pos
+        ReadProcessMemory(handle, (LPDWORD)(BASEADDR_WANTED_POSX), &baseaddr, 4, NULL); 
+        ReadProcessMemory(handle, (LPDWORD)(baseaddr), &targetPos.x, 4, NULL);
+
+        ReadProcessMemory(handle, (LPDWORD)(BASEADDR_WANTED_POSY), &baseaddr, 4, NULL); 
+        ReadProcessMemory(handle, (LPDWORD)(baseaddr), &targetPos.y, 4, NULL);
+
+        printf("corpse pkm:  x %d, y %d\n", targetPos.x, targetPos.y);
+
+        playerPos = getPlayerPosC();
+        sendRightClickToGamePos(targetPos, playerPos);
+
+        Sleep(3000);
+      }else if(strcmp(cProfile->commands[i].cmdType, "comboSkill") == 0){
+
+        hks[0] = 112; //F1
+        for(i=1;i<=6;i++){
+          hks[i]=hks[i-1]+1;
+        }
+
+        //Use Pokemon Skills (F9>>F1)
+        i=9; //F10
+        prevTargetPkmLife = 0;
+        printf("Using skills\n");
+        do{
+          /*if(i==3){ //F4
+            i=2;  //skip F4 and goes to F3
+          }*/
+          //press from F9-F1 (except F4 for Shiny Rhydon)
+          input2[0].type = INPUT_KEYBOARD;
+          input2[0].ki.wScan = 0; // hardware scan code for key
+          input2[0].ki.time = 0;
+          input2[0].ki.dwExtraInfo = 0;
+          input2[0].ki.wVk = hks[i];
+          input2[0].ki.dwFlags = 0; // 0 for key press
+
+          input2[1].type = INPUT_KEYBOARD;
+          input2[1].ki.wScan = 0; // hardware scan code for key
+          input2[1].ki.time = 0;
+          input2[1].ki.dwExtraInfo = 0;
+          input2[1].ki.wVk = hks[i];
+          input2[1].ki.dwFlags = KEYEVENTF_KEYUP;
+          SendInput(2, input2, sizeof(INPUT));
+
+          Sleep(100);
+
+          input2[0].type = INPUT_KEYBOARD;
+          input2[0].ki.wScan = 0; // hardware scan code for key
+          input2[0].ki.time = 0;
+          input2[0].ki.dwExtraInfo = 0;
+          input2[0].ki.wVk = hks[i];
+          input2[0].ki.dwFlags = 0; // 0 for key press
+
+          input2[1].type = INPUT_KEYBOARD;
+          input2[1].ki.wScan = 0; // hardware scan code for key
+          input2[1].ki.time = 0;
+          input2[1].ki.dwExtraInfo = 0;
+          input2[1].ki.wVk = hks[i];
+          input2[1].ki.dwFlags = KEYEVENTF_KEYUP;
+          SendInput(2, input2, sizeof(INPUT));
+
+          i--;
+          if(i==-1){
+            i=9;
+          }
+
+          //Check if pokemon is alive, if so, repeat skills until wild pokemon get killed
+          ReadProcessMemory(handle, (LPDWORD)(BASEADDR_WANTED), &baseaddr, 4, NULL);
+          ReadProcessMemory(handle, (LPDWORD)(baseaddr+OFFSET_WANTED_LIFE), &curTargetPkmLife, 1, NULL);
+          printf("current target pkm life: %d\n", curTargetPkmLife);
+
+          if(curTargetPkmLife == prevTargetPkmLife){
+            //wait a little more before using next skill, maybe the oponnent is temporary invulnerable
+            Sleep(1000);
+          }
+          prevTargetPkmLife = curTargetPkmLife;
+
+          //Use Revive
+          //revivePokemon();
+
+          //use Heal Elixir
+          //check if player pokemon life is low, if so, uses elixir of healing
+          //temporarily disabilitated for more tests regard memory pos of player Pkm (:TODO)
+          //DNcheckCurrPkmLife(1);
+
+          //check again if pkm is summoned
+          checkSummonPkm(handle, 1);
+          Sleep(200);
+
+          if(fPause){
+            pause();
+          }
+        }while((curTargetPkmLife>0)&&(fCaveBot));
       }
     }
   }
@@ -2835,7 +2895,8 @@ static void runCyberScript(uv_work_t *req){
 
     //use Heal Elixir
     //check if player pokemon life is low, if so, uses elixir of healing
-    DNcheckCurrPkmLife(1);
+    //temporarily disabilitated for more tests regard memory pos of player Pkm (:TODO)
+    //DNcheckCurrPkmLife(1);
 
     //check again if pkm is summoned
     checkSummonPkm(handle, 1);
@@ -3052,11 +3113,9 @@ int DNcheckCurrPkmLife(int fElixirHeal){
         printf("Using Heal Elixir\n");
 
         playerPos = getPlayerPosC();
-        //targetPkmPos = getTargetPkmPos(handleLife);
         playerPkmPos = getPlayerPkmPos(handleLife);
 
         printf("playerPos : %d, %d\n", playerPos.x, playerPos.y);
-        //printf("targetPkmPos: %d, %d\n", targetPkmPos.x, targetPkmPos.y);
         printf("playerPkmPos : %d, %d\n", playerPkmPos.x, playerPkmPos.y);
 
         ::ZeroMemory(input2, 2*sizeof(INPUT));
@@ -3427,7 +3486,6 @@ void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "attackPkm", attackPkmAsync);
   NODE_SET_METHOD(exports, "isPkmNear", isPkmNearAsync);
   NODE_SET_METHOD(exports, "isPkmNearSync", isPkmNearSync);
-  NODE_SET_METHOD(exports, "isPlayerPkmSummoned", isPlayerPkmSummonedSync);
   NODE_SET_METHOD(exports, "revivePkm", revivePkmSync);
   NODE_SET_METHOD(exports, "registerHkSwapPkm", registerHkSwapPkmAsync);
   NODE_SET_METHOD(exports, "registerHkRevivePkm", registerHkRevivePkmAsync);
