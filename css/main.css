@@ -629,6 +629,12 @@ li:last-child {
   background-position: center;
 }
 
+#btComboSkill{
+  background: url("../img/fist.png") no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+
 #btLogon{
   background: url("../img/logon.png") no-repeat;
   background-size: contain;
