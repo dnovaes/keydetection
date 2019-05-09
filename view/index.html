@@ -121,6 +121,7 @@
           <div id="btSummonPkm" class="function-el"></div>
           <div id="btBackPkm" class="function-el"></div>
           <div id="btGetLoot" class="function-el"></div>
+          <div id="btComboSkill" class="function-el"></div>
         </div>
         <div id="btStart">
           <span class="icon-button"></span>
@@ -247,6 +248,7 @@
     btBattle = document.querySelector("#battle");
     btBackPkm = document.querySelector("#btBackPkm");
     btGetLoot = document.querySelector("#btGetLoot");
+    btComboSkill = document.querySelector("#btComboSkill");
     hkRevive = document.querySelector("#hkRevive");
     hkChangePkm = document.querySelector("#hkChangePkm");
     hkDragBox = document.querySelector("#hkDragBox");
@@ -403,6 +405,12 @@
             case "targetPkm":
               textCommand = `Target Specific Pkm`;
               break;
+            case "getLoot":
+              textCommand = `Get loot from Pkm`;
+              break;
+            case "comboSkill":
+              textCommand = `Run Combo Skill`;
+              break;
             default:
               textCommand = newCommand.dataset.cmdType
               console.log(`default chosen: ${textCommand}`)
@@ -473,6 +481,12 @@
           break;
         case "targetPkm":
           textCommand = `Target Specfic Pkm`;
+          break;
+        case "getLoot":
+          textCommand = `Get loot from Pkm`;
+          break;
+        case "comboSkill":
+          textCommand = `Run Combo Skill`;
           break;
       }
       newCommand.innerHTML = `<div class="sel-text">${textCommand}</div><div class="remove-el"></div>`;
@@ -736,6 +750,10 @@
 
     });
 
+    btGetLoot.addEventListener("click", function(){
+      addCommandToProfile(`getLoot`)
+    })
+
     btBattle.addEventListener("click", function(){
       addCommandToProfile(`targetPkm`)
     })
@@ -746,6 +764,11 @@
       }
     });
 
+    btComboSkill.addEventListener("click", function(){
+      if(!lockFlag){
+        addCommandToProfile(`comboSkill`);
+      }
+    })
 
     btBackPkm.addEventListener("click", function(){
       if(!lockFlag){
