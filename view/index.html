@@ -8,278 +8,70 @@
   </head>
   <body style="-webkit-app-region: drag">
 
-    <div id="title">
-      <span></span>
-    </div>
+    <div id="close-icon" style="-webkit-app-region: no-drag"></div>
 
-    <div id="main-screen">
-      <span id="background_pkm"></span>
+
+    <div id="hk-screen">
       <div class="content">
 
-        <div class="menu-item-small" id="fishing">
+        <div class="menu-item-small" id="revive" style="margin-bottom: 20px;">
           <span class="icon-button"></span>
-          <div class="text">Fishing</div>
+          <div class="text">Revive Pos</div>
         </div>
 
-        <div class="menu-item-small" id="revive">
-          <span class="icon-button"></span>
-          <div class="text">Auto-Revive</div>
+        <div class="divHotkey">
+          <button id="hkRevive" class="setKey">Set Key</button>
+          <input type="checkbox" id="chkboxRevive" name="feature" value="revive" />
+          <label for="revive">Use Revive and Summon Pkm</label>
         </div>
-
-        <div class="clear-float"></div>
-
-        <div class="menu-item" id="screenCoords">
-          <span class="icon-button"></span>
-          <div id="coord_span">
-            <div class="coord_element">
-              <label for="coordx" class="coord_label">x</label>
-              <input name="coordx" class="coord_field" disabled>
-            </div>
-            <div class="coord_element">
-              <label for="coordy" class="coord_label">y</label>
-              <input name="coordy" class="coord_field" disabled>
-            </div>
-            <div class="coord_element">
-              <label for="coordw" class="coord_label">w</label>
-              <input name="coordw" class="coord_field" disabled>
-            </div>
-            <div class="coord_element">
-              <label for="coordh" class="coord_label">h</label>
-              <input name="coordh" class="coord_field" disabled>
-            </div>
-          </div>
-        </div>
-
-        <div class="menu-item" id="caveBot">
-          <span class="icon-button"></span>
-          <div class="text">Cave-bot</div>
-        </div>
-
-        <div id="console-title">Console:<br></div>
-        <div id="console"></div>
-
-      </div> <!--end content-->
-    </div> <!--end main-->
-
-    <div id="cave-screen">
-      <div id="container-route">
-        <div class="container-title"> Profile</div>
-        <div class="profile-icons">
-          <div class="icon-el">+</div>
-          <div class="icon-el">-</div>
-        </div>
-        <select name="profile" id="profile"></select>
-
-        <ul class="list-commands"></ul>
-
-        <div class="manage-options">
-          <div id="new" class="el">New</div>
-          <div id="save" class="el">Save</div>
+    
+        <div class="divHotkey">
+          <button id="hkChangePkm" class="setKey">Set Key</button>
+          <input type="checkbox" id="chkboxChangePkm" name="feature" value="changepkm" />
+          <label for="horns">Change Pokemon from Second Slot</label>
         </div>
       </div>
-
-      <div id="container-functions">
-        <div class="container-title"> functions</div>
-        <div class="features">
-          <div id="checkpoint" class="feature-el"></div>
-          <div id="hand" class="feature-el"></div>
-          <div id="keyboard" class="feature-el"></div>
-          <div class="clear-float"></div>
-          <div id="battle" class="feature-el"></div>
-          <div id="sleep" class="feature-el"></div>
-        </div>
-        <div id="btStart">
-          <span class="icon-button"></span>
-          <div class="text">Start</div>
-        </div>
-      </div>
-
-      <div id="container-loot"></div>
-
-      <div id="footer">
-        <div class="menu-icon" id="btVoltar"></div>
-      </div>
-
     </div>
+
   </body>
 
-  <script type="text/javascript" src="../bot.js"></script>
   <script type="text/javascript">
     console.log(process.versions);
+
+    const bl = require("../build/Release/battlelist");
+    const focuscc = require("../build/Release/focus");
+    const mouse = require("../build/Release/mouse");
     const fs = require('fs');
+    const {remote, shell} = require('electron');
+
+    var pos = {
+      pkmSlot: { "x":1200, "y":182 },
+      reviveSlot: { "x":1180, "y":182 }
+    }
 
     /* Flags */
-
     lockFlag = 0;
     caveFlag = 0;
+    fRevive = 0;
 
     /* Elements */
+    divHkConfig = document.querySelector("#hkConfig");
 
-    divCaveBot = document.querySelector("#caveBot");
-    divCaveIcon = document.querySelector("#caveBot span");
-
-    divCaveScreen = document.querySelector("#cave-screen");
-    divMainScreen = document.querySelector("#main-screen");
-
-    listCommands = document.querySelector(".list-commands");
-    selProfile = document.getElementById("profile");
+    divHkScreen = document.querySelector("#hk-screen");
+    divRevive = document.getElementById("revive");
 
     /* Buttons */
-    btVoltar = document.querySelector("#btVoltar");
-    btNew = document.getElementById("new");
-    btSleep = document.getElementById("sleep");
-    btStart = document.getElementById("btStart");
-    btHand = document.querySelector("#hand");
+    hkRevive = document.querySelector("#hkRevive");
+    hkChangePkm = document.querySelector("#hkChangePkm");
+    btCloseIcon = document.querySelector("#close-icon");
+
+    /* Checkbox */
+    chkboxRevive = document.querySelector("#chkboxRevive");
+    chkboxChangePkm = document.querySelector("#chkboxChangePkm");
 
     /* Functions */
-    var removeCommandEl = (e) => {
-      let el = e.target.parentElement;
-      el.parentElement.removeChild(el);
-    }
-
-    var highlightCommand = (e) => {
-      //elCommand is the command of the list clicked.
-      let elCommand = e.target.parentElement;
-      let elSelected = document.querySelector(".sel-el.selected");
-      if(elSelected){
-        elSelected.classList.remove("selected");
-      }
-      if(elCommand != elSelected)
-        elCommand.classList.add("selected");
-    }
-
-    var addCommandToList = (newCommand) =>{
-      let selectedCommand = document.querySelector(".sel-el.selected");
-      if(selectedCommand){
-        selectedCommand.parentNode.insertBefore(newCommand, selectedCommand.nextSibling);
-      }else{
-        listCommands.appendChild(newCommand);
-      }
-    }
-
-    var addLockScreen = () => {
-      lockFlag=1;
-      let opacityDiv = document.createElement("div");
-      opacityDiv.classList.add("lock-screen");
-      document.body.appendChild(opacityDiv);
-      opacityDiv.addEventListener("click", function(){
-        removeLockScreen();
-      });
-    }
-
-    var removeLockScreen = () => {
-      let opacityDiv = document.querySelector(".lock-screen");
-      document.body.removeChild(opacityDiv);
-      let divPrompt = document.querySelector(".prompt");
-      document.body.removeChild(divPrompt);
-      lockFlag = 0;
-    }
-
-    var loadProfiles = (dirPath) => {
-      fs.readdir( dirPath, function(err, files){
-        if(err){
-          console.error("Could not list the directory.", err);
-          process.exit(1);
-        }
-
-        if(selProfile.children.length > 0){
-          clearProfileList();
-        }
-
-        files.forEach( function( filename, index){
-          filename = filename.split(".")[0];
-          //console.log(`${filename}, ${index}`);
-          let option = document.createElement("option");
-          option.value = index;
-          option.text = filename;
-          selProfile.appendChild(option);
-        });
-        //load commands from the first selected
-        let iSelected = selProfile.options.selectedIndex;
-        let fileName = selProfile.options[iSelected].text;
-        loadCommands(fileName);
-      });
-    }
-
-    var clearProfileList = () => {
-      let length = selProfile.children.length;
-      for(var i=0; i<length; i++){
-        selProfile.removeChild(selProfile.children[0]);
-      }
-    }
-
-    var clearListCommands = () => {
-      let listLength = listCommands.children.length;
-      for(var i=0; i<listLength; i++){
-        listCommands.removeChild(listCommands.children[0]);
-      }
-    }
-
-    var loadCommands = (fileName) => {
-      fs.readFile(`./configuration/profiles/${fileName}.json`, "utf-8", (err, data) => {
-        if (err) throw err;
-        let obj = JSON.parse(data);
-        //clear list before loading commands
-        clearListCommands();
-
-        //add commands from the file to the list
-        for(var i=0; i<obj.content.length; i++){
-          let newCommand = document.createElement("li");
-          newCommand.classList.add("sel-el");
-          newCommand.dataset.cmdType = obj.content[i].cmdType;
-          switch(newCommand.dataset.cmdType){
-            case 'check':
-              newCommand.innerHTML = `<div class="sel-text">${obj.content[i].pos[0]},${obj.content[i].pos[1]},${obj.content[i].pos[2]}</div><div class="remove-el"></div>`;
-              break;
-            case 'sleep':
-              newCommand.dataset.value = obj.content[i].value;
-              newCommand.innerHTML = `<div class="sel-text">Sleep for ${obj.content[i].value/1000}s</div><div class="remove-el"></div>`;
-              break;
-            case 'mouseclick':
-              newCommand.dataset.clickType = obj.content[i].clickType;
-              newCommand.dataset.posx = obj.content[i].pos[0];
-              newCommand.dataset.posy = obj.content[i].pos[1];
-              newCommand.innerHTML = `<div class="sel-text">${obj.content[i].clickType}click (${obj.content[i].pos[0]}, ${obj.content[i].pos[1]}) </div><div class="remove-el"></div>`;
-              break;
-          }
-          newCommand.addEventListener("click", highlightCommand);
-          newCommand.children[1].addEventListener("click", removeCommandEl);
-          listCommands.appendChild(newCommand);
-        }
-      });
-    }
-
-    var loadCommandsToObj = () => {
-      let obj = {};
-      let iSelected = selProfile.options.selectedIndex;
-      let fileName = selProfile.options[iSelected].text;
-
-      obj.fileName = fileName;
-      obj.content = [];
-            console.log(listCommands.children[1]);
-      for(var i=0; i<listCommands.children.length; i++){
-        obj.content[i] = {};
-        obj.content[i].cmdType = listCommands.children[i].dataset.cmdType;
-        switch(obj.content[i].cmdType){
-          case 'check':
-            obj.content[i].pos = listCommands.children[i].children[0].textContent.split(",");
-            break;
-          case 'sleep':
-            obj.content[i].value = listCommands.children[i].dataset.value;
-            break;
-          case 'mouseclick':
-            obj.content[i].pos = [];
-            obj.content[i].pos.push(listCommands.children[i].dataset.posx);
-            obj.content[i].pos.push(listCommands.children[i].dataset.posy);
-            obj.content[i].clickType = listCommands.children[i].dataset.clickType;
-            break;
-          default:
-            console.log("default choosen");
-            break;
-        }
-      }
-      return obj;
-    }
+    //default Pc Lukas
+    bl.registerPkmSlot(pos.pkmSlot);
 
     /* Events */
     /*
@@ -292,230 +84,65 @@
     };
     */
 
-    divCaveBot.addEventListener("mouseover", function(){
-      divCaveIcon.style.backgroundImage = "url('../img/red_champion.gif')";
-    });
-
-    divCaveBot.addEventListener("mouseout", function(){
-      divCaveIcon.style.backgroundImage = "url('../img/red_champion.png')";
-    });
-
-    divCaveBot.addEventListener("click", function(){
-      divCaveScreen.style.display = "block";
-      divMainScreen.style.display = "none";
-      loadProfiles("./configuration/profiles");
-    });
-
-    btVoltar.addEventListener("click", function(){
-      divCaveScreen.style.display = "none";
-      divMainScreen.style.display = "block";
-    });
-
-    BtsRemoveEl = document.querySelectorAll(".remove-el");
-    for (var i = 0; i < BtsRemoveEl.length; i++) {
-      BtsRemoveEl[i].addEventListener("click", function(e){
-        removeCommandEl(e);
-      });
-    }
-
-    btNew.addEventListener("click", function(){
-      if(!lockFlag){
-        addLockScreen();
-        let divPrompt = document.createElement("div");
-        divPrompt.classList.add("prompt");
-        divPrompt.classList.add("lock-el");
-        divPrompt.innerHTML = `<div class="text">Type the name of the new PROFILE</div><input name="prompt" id="input-prompt"/><div class="btConfirm">Ok</div>`;
-        document.body.appendChild(divPrompt);
-        document.querySelector("#input-prompt").focus();
-
-        let btConfirmPrompt = document.querySelector(".btConfirm");
-        btConfirmPrompt.addEventListener("click", function(){
-          let input = document.querySelector(".prompt input");
-          if(input.value){
-            let option = document.createElement("option");
-            option.value = input.value;
-            option.text = input.value;
-            selProfile.appendChild(option);
-            selProfile.selectedIndex = selProfile.length-1;
-            clearListCommands();
-            removeLockScreen();
-          }
-        });
-      }
-    });
-
-    selProfile.addEventListener("change", function(e){
-      let iSelected = selProfile.options.selectedIndex;
-      let fileName = selProfile.options[iSelected].text;
-      loadCommands(fileName);
-    });
-
-    btSave = document.getElementById("save");
-    btSave.addEventListener("click", function(){
-
-      let obj = {};
-      obj = loadCommandsToObj();
-      //console.log(JSON.stringify(obj));
-      fs.writeFile(`./configuration/profiles/${obj.fileName}.json`, JSON.stringify(obj), (err) => {
-        if (err) throw err;
-        console.log('The file has been saved!');
-      });
-    });
-
-    btStartText = document.querySelector("#btStart .text");
-    btStart.addEventListener("click", function(){
-      if(!caveFlag){
-        //start caveBot
-
-        //change button style
-        btStart.style.background = 'linear-gradient(#774247, #f7e53f)';
-        btStartText.textContent = "Stop";
-        caveFlag=1;
-
-        //load file
-        let obj = loadCommandsToObj();
-        console.log(JSON.stringify(obj));
-
-        //focus window and run the cave with the loaded file
+    divRevive.addEventListener("click", function(){
+      if(fRevive === 0){
         focuscc.focusWindow(function(res){
-          bl.runProfile(obj, function(res){
-            if(res.hasOwnProperty("cmdPos")){
-              console.log(`[INDEX.html] runnning command number: ${res.cmdPos}\n`);
-              let listCommandsProfile = document.querySelectorAll(".list-commands .sel-el")
+          fRevive=2; //cursorPosbyClick is waiting for a response
 
-              let elRunningPrev = document.querySelector(".sel-el.running");
-              if(elRunningPrev){
-                elRunningPrev.classList.remove("running");
-              }
-
-              let elRunningNow = listCommandsProfile[res.cmdPos];
-              elRunningNow.classList.add("running");
-            }
+          //getting pkm slot pos
+          mouse.getCursorPosbyClick(function(res){
+            console.log(`PkmSlot) res.x: ${res.x} res.y: ${res.y}`);
+            pos.pkmSlot.x = res.x;
+            pos.pkmSlot.y = res.y;
+            divRevive.style.background = 'linear-gradient(#774247, #f7e53f)';
+            bl.registerPkmSlot(pos.pkmSlot);
+            fRevive=1;
           });
         });
+      }else if (fRevive === 1){
+        divRevive.style.background = 'linear-gradient(red, #774247)';
+        fRevive=0;
+      }
+    });
 
+    var hkKeydown = (e) => {
+      console.log(e.target);
+      e.target.innerText = e.key; 
+      e.target.dataset.keyCode = e.keyCode;
+      e.target.removeEventListener("keydown", hkKeydown)
+    }
+    hkRevive.addEventListener("click", function(e){
+      e.target.addEventListener("keydown", hkKeydown);
+    });
+    hkChangePkm.addEventListener("click", function(e){
+      e.target.addEventListener("keydown", hkKeydown);
+    });
+
+    chkboxChangePkm.addEventListener("click", function(e){
+      if(hkChangePkm.dataset.keyCode == undefined){
+        alert("Configure your hotkey first");
+        e.preventDefault();
+      }else if(e.target.checked){
+        console.log("hkChangePkm Pronto pra usar!");
+        bl.registerHkSwapPkm(hkChangePkm.dataset.keyCode);
       }else{
-        //stop caveBot
-        console.log("trying to stop profile");
-        bl.stopProfileSync();
-        console.log("command stopProfile executed.\n");
-        btStart.style.background = 'linear-gradient(red, #774247)';
-        btStartText.textContent = "Start";
-        caveFlag=0;
+        //unregister swap hotkey
+        //bl.unregisterHk(2);
       }
     });
 
-    btSleep.addEventListener("click", function(){
-      if(!lockFlag){
-        addLockScreen();
-        let divPrompt = document.createElement("div");
-        divPrompt.classList.add("prompt");
-        divPrompt.classList.add("lock-el");
-        divPrompt.innerHTML = `
-          <div class="text">Wait for how many seconds?</div>
-          <input name="prompt" type="number"/>
-          <div class="btConfirm">Ok</div>
-        `;
-        document.body.appendChild(divPrompt);
-        document.querySelector(".prompt input").focus();
-
-        let btConfirmPrompt = document.querySelector(".btConfirm");
-        btConfirmPrompt.addEventListener("click", function(){
-          let input = document.querySelector(".prompt input");
-          if(input.value){
-            input.value*=1000;
-            //console.log(`value in miliseconds: ${input.value}`);
-
-            let newCommand = document.createElement("li");
-            newCommand.classList.add("sel-el");
-            newCommand.dataset.cmdType = "sleep";
-            newCommand.dataset.value = input.value;
-            newCommand.addEventListener("click", removeCommandEl);
-            newCommand.innerHTML = `<div class="sel-text">Sleep for ${input.value/1000}s</div><div class="remove-el"></div>`;
-            addCommandToList(newCommand);
-            removeLockScreen();
-          }
-        });
+    chkboxRevive.addEventListener("click", function(e){
+      if(hkRevive.dataset.keyCode == undefined){
+        alert("Configure your hotkey first");
+        e.preventDefault();
+      }else if(e.target.checked){
+        console.log("hkRevive Pronto pra usar!");
+        bl.registerHkRevivePkm(hkRevive.dataset.keyCode);
       }
     });
 
-    btHand.addEventListener("click", function(){
-      if(!lockFlag){
-        addLockScreen();
-        let divPrompt = document.createElement("div");
-        divPrompt.classList.add("prompt");
-        divPrompt.classList.add("lock-el");
-        divPrompt.innerHTML = `
-          <button name="left" class="clickType">LeftClick</button>
-          <button name="right" class="clickType">RightClick</button>
-        `;
-        document.body.appendChild(divPrompt);
-
-        let btsClickType = document.querySelectorAll(".clickType");
-        btsClickType.forEach(function(bt, i) {
-          if(i==0){
-            //leftclick
-            bt.addEventListener("click", function(){
-              focuscc.focusWindow(function(res){
-                //getting click position
-                mouse.getCursorPosbyClick(function(res){
-                  let newCommand = document.createElement("li");
-                  newCommand.classList.add("sel-el");
-                  newCommand.dataset.cmdType = "mouseclick";
-                  newCommand.dataset.clickType= "left";
-                  let posX = (res.x-center.x)/sqm.length;
-                  posX = Math.round(posX);
-                  let posY = (res.y-center.y)/sqm.height;
-                  posY = Math.round(posY);
-                  newCommand.dataset.posx= posX;
-                  newCommand.dataset.posy= posY;
-                  newCommand.addEventListener("click", removeCommandEl);
-                  newCommand.innerHTML = `<div class="sel-text">leftclick (${posX}, ${posY})</div><div class="remove-el"></div>`;
-                  addCommandToList(newCommand);
-                  removeLockScreen();
-                });
-              });
-            });
-          }else{
-            //rightclick
-            bt.addEventListener("click", function(){
-              focuscc.focusWindow(function(res){
-                //getting click position
-                mouse.getCursorPosbyClick(function(res){
-                  let newCommand = document.createElement("li");
-                  newCommand.classList.add("sel-el");
-                  newCommand.dataset.cmdType = "mouseclick";
-                  newCommand.dataset.clickType= "right";
-                  newCommand.dataset.posx= res.x;
-                  newCommand.dataset.posy= res.y;
-                  newCommand.addEventListener("click", removeCommandEl);
-                  newCommand.innerHTML = `<div class="sel-text">rightclick (${res.x}, ${res.y})</div><div class="remove-el"></div>`;
-                  addCommandToList(newCommand);
-                  removeLockScreen();
-                });
-              });
-            });
-          }
-        });
-        /*
-        btConfirmPrompt.addEventListener("click", function(){
-          let input = document.querySelector(".prompt input");
-          if(input.value){
-            input.value*=1000;
-            //console.log(`value in miliseconds: ${input.value}`);
-
-            let newCommand = document.createElement("li");
-            newCommand.classList.add("sel-el");
-            newCommand.dataset.cmdType = "sleep";
-            newCommand.dataset.value = input.value;
-            newCommand.addEventListener("click", removeCommandEl);
-            newCommand.innerHTML = `<div class="sel-text">Sleep for ${input.value/1000}s</div><div class="remove-el"></div>`;
-            listCommands.appendChild(newCommand);
-            removeLockScreen();
-          }
-        });
-        */
-      }
+    btCloseIcon.addEventListener("click", function(e){
+      remote.app.quit();
     });
 
   </script>
