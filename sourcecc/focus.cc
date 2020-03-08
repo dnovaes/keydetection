@@ -19,7 +19,6 @@ using v8::Number;
 using v8::Value;
 using v8::Persistent;
 using v8::Function;
-using v8::Handle;
 
 
 struct Work{
@@ -144,6 +143,7 @@ static void focusWindow(uv_work_t *req){
 
 static void focusWindowComplete(uv_work_t *req, int status){
   Isolate* isolate = Isolate::GetCurrent();
+  Local<v8::Context> context = isolate->GetCurrentContext();
   v8::HandleScope handleScope(isolate);
 
   Work *work = static_cast<Work*>(req->data);
@@ -151,10 +151,10 @@ static void focusWindowComplete(uv_work_t *req, int status){
   //Creates a variable of type Number which stores a value of v8::Number with value 1
   //Local variables are just visible to this scope. Handles are visible even in Javascript
   Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  Local<Value> argv[] = {val};
 
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  Local<Function>::New(isolate, work->callback)->Call(context, context->Global(), 1, argv);
 
   //Free up the persistent function callback
   work->callback.Reset();
