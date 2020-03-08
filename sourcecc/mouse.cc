@@ -18,7 +18,6 @@ using v8::Boolean;
 using v8::Value;
 using v8::Persistent;
 using v8::Function;
-using v8::Handle;
 using v8::Array;
 
 struct Work{
@@ -55,6 +54,7 @@ static void setCursorPos(uv_work_t *req){
 
 static void setCursorPosComplete(uv_work_t *req, int status){
   Isolate* isolate = Isolate::GetCurrent();
+  Local<v8::Context> context = isolate->GetCurrentContext();
   v8::HandleScope handleScope(isolate);
 
   Work *work = static_cast<Work*>(req->data);
@@ -67,10 +67,10 @@ static void setCursorPosComplete(uv_work_t *req, int status){
   //Creates a variable of type Number which stores a value of v8::Number with value 1
   //Local variables are just visible to this scope. Handles are visible even in Javascript
   Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  Local<Value> argv[] = {val};
 
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  Local<Function>::New(isolate, work->callback)->Call(context, context->Global(), 1, argv);
 
   //Free up the persistent function callback
   work->callback.Reset();
@@ -79,17 +79,18 @@ static void setCursorPosComplete(uv_work_t *req, int status){
 
 void setCursorPosAsync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
+  Local<v8::Context> context = isolate->GetCurrentContext();
 
   Work* work = new Work();
   work->request.data = work;
 
   Local<Object> objPos = Local<Object>::Cast(args[0]);
-  Local<Value> x = objPos->Get(String::NewFromUtf8(isolate, "x"));
-  Local<Value> y = objPos->Get(String::NewFromUtf8(isolate, "y"));
+  Local<Value> x = objPos->Get(context, String::NewFromUtf8(isolate, "x").ToLocalChecked()).ToLocalChecked();
+  Local<Value> y = objPos->Get(context, String::NewFromUtf8(isolate, "y").ToLocalChecked()).ToLocalChecked();
   //printf("coords X: %d\n", x->IntegerValue()); //returns a int64_t
   //printf("coords X: %d\n", x->Uint32Value());
-  work->pos.x = x->Uint32Value();
-  work->pos.y = y->Uint32Value();
+  work->pos.x = x->Uint32Value(context).ToChecked();
+  work->pos.y = y->Uint32Value(context).ToChecked();
 
   //store the callback from JS in the work package to invoke later
   Local<Function> callback = Local<Function>::Cast(args[1]);
@@ -125,16 +126,17 @@ static void leftClick(uv_work_t *req){
 static void leftClickComplete(uv_work_t *req, int status){
   Isolate* isolate = Isolate::GetCurrent();
   v8::HandleScope handleScope(isolate);
+  Local<v8::Context> context = isolate->GetCurrentContext();
 
   Work *work = static_cast<Work*>(req->data);
 
   //Creates a variable of type Number which stores a value of v8::Number with value 1
   //Local variables are just visible to this scope. Handles are visible even in Javascript
   Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  Local<Value> argv[] = {val};
 
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  Local<Function>::New(isolate, work->callback)->Call(context, context->Global(), 1, argv);
 
   //Free up the persistent function callback
   work->callback.Reset();
@@ -231,6 +233,7 @@ static void getColorFishing(uv_work_t *req){
 
 static void getColorFishingComplete(uv_work_t *req, int status){
   Isolate* isolate = Isolate::GetCurrent();
+  Local<v8::Context> context = isolate->GetCurrentContext();
   v8::HandleScope handleScope(isolate);
 
   Work *work = static_cast<Work*>(req->data);
@@ -238,10 +241,10 @@ static void getColorFishingComplete(uv_work_t *req, int status){
   //Creates a variable of type Number which stores a value of v8::Number with value 1
   //Local variables are just visible to this scope. Handles are visible even in Javascript
   Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  Local<Value> argv[] = {val};
 
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  Local<Function>::New(isolate, work->callback)->Call(context, context->Global(), 1, argv);
 
   //Free up the persistent function callback
   work->callback.Reset();
@@ -250,18 +253,19 @@ static void getColorFishingComplete(uv_work_t *req, int status){
 
 void getColorFishingAsync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
+  Local<v8::Context> context = isolate->GetCurrentContext();
 
   Work* work = new Work();
   work->request.data = work;
 
   Local<Object> posObj = Local<Object>::Cast(args[0]);
-  Local<Value> x = posObj->Get(String::NewFromUtf8(isolate, "x"));
-  work->pos.x = x->Uint32Value();
-  Local<Value> y = posObj->Get(String::NewFromUtf8(isolate, "y"));
-  work->pos.y = y->Uint32Value();
+  Local<Value> x = posObj->Get(context, String::NewFromUtf8(isolate, "x").ToLocalChecked()).ToLocalChecked();
+  work->pos.x = x->Uint32Value(context).ToChecked();
+  Local<Value> y = posObj->Get(context, String::NewFromUtf8(isolate, "y").ToLocalChecked()).ToLocalChecked();
+  work->pos.y = y->Uint32Value(context).ToChecked();
 
-  pid = args[1]->Int32Value();
-  moduleAddr = args[2]->Int32Value();
+  pid = args[1]->Int32Value(context).ToChecked();
+  moduleAddr = args[2]->Int32Value(context).ToChecked();
 
   //posObj->Set(String::NewFromUtf8(isolate, "x"), Number::New(isolate, x->Uint32Value()));
   //posObj->Set(String::NewFromUtf8(isolate, "y"), Number::New(isolate, y->Uint32Value()));
@@ -306,6 +310,7 @@ static void getCursorPos(uv_work_t *req){
 
 static void getCursorPosComplete(uv_work_t *req, int status){
   Isolate* isolate = Isolate::GetCurrent();
+  Local<v8::Context> context = isolate->GetCurrentContext();
   v8::HandleScope handleScope(isolate);
 
 //  printf("isPkmNearComplete calculations started\n");
@@ -313,12 +318,12 @@ static void getCursorPosComplete(uv_work_t *req, int status){
   Work *work = static_cast<Work*>(req->data);
 
   Local<Object> obj = Object::New(isolate);
-  obj->Set(String::NewFromUtf8(isolate, "x"), Number::New(isolate, work->pos.x));
-  obj->Set(String::NewFromUtf8(isolate, "y"), Number::New(isolate, work->pos.y));
+  obj->Set(context, String::NewFromUtf8(isolate, "x").ToLocalChecked(), Number::New(isolate, work->pos.x));
+  obj->Set(context, String::NewFromUtf8(isolate, "y").ToLocalChecked(), Number::New(isolate, work->pos.y));
 
-  Handle<Value> argv[] = {obj};
+  Local<Value> argv[] = {obj};
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  Local<Function>::New(isolate, work->callback)->Call(context, context->Global(), 1, argv);
 
   //Free up the persistent function callback
   work->callback.Reset();

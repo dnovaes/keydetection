@@ -23,7 +23,7 @@ using v8::Boolean;
 using v8::Value;
 using v8::Persistent;
 using v8::Function;
-using v8::Handle;
+using v8::Local;
 using v8::Array;
 
 struct pkmUnit{
@@ -38,6 +38,15 @@ struct pkmBattleList{
 
 struct Coords{
   int x,y,z;
+};
+
+struct WorkHk{
+  //pointer when starting worker threads
+  uv_work_t request;
+  uv_async_t async;
+  //stores the javascript callback function, persistent means: store in the heap
+  Persistent<Function> callback;
+  int keyCode;
 };
 
 struct WorkPos{
@@ -128,6 +137,7 @@ int m3 = 0;
 int m4 = 0;
 int SCREEN_X = 0;
 int SCREEN_Y = 0;
+POINT pkmSlot;
 
 //C function declaration
 Coords getPlayerPosC();
@@ -135,6 +145,9 @@ DWORD GetProcessThreadID(DWORD pID);
 DWORD_PTR dwGetModuleBaseAddress(DWORD pid, TCHAR *szModuleName);
 void printThreads(DWORD pid);
 int DNcheckCurrPkmLife();
+void swapPokemon();
+void revivePokemon();
+void dragItemtoBellow();
 
 //const
 
@@ -165,8 +178,8 @@ const DWORD_PTR BASEADDR_BLACOUNT           = 0x0038E820;
 const DWORD_PTR OFFSET_BLCOUNT_P1           = 0x33C;
 const DWORD_PTR OFFSET_BLCOUNT_P2           = 0xA4;
 const DWORD_PTR OFFSET_BLCOUNT_P3           = 0x30;
-//pointer to fishing status address
-const DWORD_PTR BASEADDR_FISHING            = 0x0038E83C;
+//pointer to fishing status address (byte)
+const DWORD_PTR BASEADDR_FISHING            = 0x0039283C;
 const DWORD_PTR OFFSET_FISHING_P1           = 0x54;
 const DWORD_PTR OFFSET_FISHING_P2           = 0x4;
 //pointer to player's pokemon summoned status address
@@ -609,6 +622,7 @@ void sendSygnalCreatureAddr(uv_async_t *handle) {
   Work *work = static_cast<Work*> (req->data);
 
   Isolate* isolate = Isolate::GetCurrent();
+  Local<v8::Context> context = isolate->GetCurrentContext();
   v8::HandleScope handleScope(isolate);
 /*
 const DWORD_PTR OFFSET_PKM_NAME_LENGTH   = 0x24; //byte
@@ -634,24 +648,26 @@ const DWORD_PTR OFFSET_PKM_LIFE   = 0x38; //byte
     ReadProcessMemory(handlep, (LPDWORD)(entityAddr+0x28+OFFSET_PKM_LOOKTYPE), &entityLookType, 1, NULL);
     CloseHandle(handlep); //close handle of process
 
-    obj->Set(String::NewFromUtf8(isolate, "addr"), Number::New(isolate, entityAddr));
-    obj->Set(String::NewFromUtf8(isolate, "name"), String::NewFromUtf8(isolate, entityName));
-    obj->Set(String::NewFromUtf8(isolate, "type"), Number::New(isolate, entityType));
-    obj->Set(String::NewFromUtf8(isolate, "lookType"), Number::New(isolate, entityLookType));
-    obj->Set(String::NewFromUtf8(isolate, "counterBl"), Number::New(isolate, entityNumberBl));
-    obj->Set(String::NewFromUtf8(isolate, "fAction"), Number::New(isolate, 2));
+    obj->Set(context, String::NewFromUtf8(isolate, "addr").ToLocalChecked(), Number::New(isolate, entityAddr));
+    obj->Set(context, String::NewFromUtf8(isolate, "name").ToLocalChecked(), String::NewFromUtf8(isolate, entityName).ToLocalChecked());
+    obj->Set(context, String::NewFromUtf8(isolate, "type").ToLocalChecked(), Number::New(isolate, entityType));
+    obj->Set(context, String::NewFromUtf8(isolate, "lookType").ToLocalChecked(), Number::New(isolate, entityLookType));
+    obj->Set(context, String::NewFromUtf8(isolate, "counterBl").ToLocalChecked(), Number::New(isolate, entityNumberBl));
+    obj->Set(context, String::NewFromUtf8(isolate, "fAction").ToLocalChecked(), Number::New(isolate, 2));
 
   }else{
     //action == 1. Send process info (pid and moduleAddress)
-    obj->Set(String::NewFromUtf8(isolate, "moduleAddr"), Number::New(isolate, moduleAddr));
-    obj->Set(String::NewFromUtf8(isolate, "pid"), Number::New(isolate, pid));
-    obj->Set(String::NewFromUtf8(isolate, "fAction"), Number::New(isolate, 1));
+    obj->Set(context, String::NewFromUtf8(isolate, "moduleAddr").ToLocalChecked(), Number::New(isolate, moduleAddr));
+    obj->Set(context, String::NewFromUtf8(isolate, "pid").ToLocalChecked(), Number::New(isolate, pid));
+    obj->Set(context, String::NewFromUtf8(isolate, "fAction").ToLocalChecked(), Number::New(isolate, 1));
   }
 
-  Handle<Value> argv[] = {obj};
+  Local<Value> argv[] = {obj};
   //execute the callback
   //takes some time to execute for the first time
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  //Handle<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  Local<Function> callback = Local<Function>::New(isolate, work->callback);
+  callback->Call(context, context->Global(), 1, argv).ToLocalChecked();
 
   mutex = 1;
   uv_rwlock_rdunlock(&numlock);
@@ -676,21 +692,22 @@ void printBattleListAsync(const FunctionCallbackInfo<Value>& args){
 
 void setScreenConfigSync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
+  Local<v8::Context> context = isolate->GetCurrentContext();
 
   Work* work = new Work();
   work->request.data = work;
 
-  Local<Object> centerObj = args[0]->ToObject();
-  Local<Value> x = centerObj->Get(String::NewFromUtf8(isolate, "x"));
-  Local<Value> y = centerObj->Get(String::NewFromUtf8(isolate, "y"));
-  center.x = x->Int32Value();
-  center.y = y->Int32Value();
+  Local<Object> centerObj = args[0]->ToObject(isolate->GetCurrentContext()).ToLocalChecked();
+  Local<Value> x = centerObj->Get(String::NewFromUtf8(isolate, "x").ToLocalChecked());
+  Local<Value> y = centerObj->Get(String::NewFromUtf8(isolate, "y").ToLocalChecked());
+  center.x = x->Int32Value(context).ToChecked();
+  center.y = y->Int32Value(context).ToChecked();
 
-  Local<Object> sqmObj = args[1]->ToObject();
-  x = sqmObj->Get(String::NewFromUtf8(isolate, "length"));
-  y = sqmObj->Get(String::NewFromUtf8(isolate, "height"));
-  sqm.x = x->Int32Value();
-  sqm.y = y->Int32Value();
+  Local<Object> sqmObj = args[1]->ToObject(context).ToLocalChecked();
+  x = sqmObj->Get(context, String::NewFromUtf8(isolate, "length").ToLocalChecked()).ToLocalChecked();
+  y = sqmObj->Get(context, String::NewFromUtf8(isolate, "height").ToLocalChecked()).ToLocalChecked();
+  sqm.x = x->Int32Value(context).ToChecked();
+  sqm.y = y->Int32Value(context).ToChecked();
 
   //store the callback from JS in the work package to invoke later
   Local<Function> callback = Local<Function>::Cast(args[2]);
@@ -701,6 +718,52 @@ void setScreenConfigSync(const FunctionCallbackInfo<Value>& args){
 
   Local<Number> val = Number::New(isolate, 1);
   args.GetReturnValue().Set(val);
+}
+
+//register hotkey for swapPokemon
+static void registerHkDragBox(uv_work_t *req){
+
+  WorkHk *work = static_cast<WorkHk*>(req->data);
+
+  //fill the global var screen resolution
+  SCREEN_X = GetSystemMetrics(SM_CXSCREEN);
+  SCREEN_Y = GetSystemMetrics(SM_CYSCREEN);
+
+  if(RegisterHotKey(NULL, 1, NULL, work->keyCode)){
+    MSG msg = {0};
+
+    //printf("Running as PID=%d\n",getpid());
+
+    while (GetMessage(&msg, NULL, 0, 0) != 0 ){
+      if(msg.message == WM_HOTKEY){
+        fPause = !fPause;
+        //UnregisterHotKey(NULL, 1);
+
+        dragItemtoBellow();
+        //Communication between threads(uv_work_t and uv_async_t);
+        work->async.data = (void*) req;
+        //uv_async_send(&work->async);
+      }
+    }
+  }
+}
+void registerHkDragBoxAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+  Local<v8::Context> context = isolate->GetCurrentContext();
+
+  WorkHk* work = new WorkHk();
+  work->request.data = work;
+
+  work->keyCode = args[0]->Int32Value(context).ToChecked();
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[1]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  //uv_async_init(uv_default_loop(), &work->async, sendSygnalHkDragBox);
+  uv_queue_work(uv_default_loop(), &work->request, registerHkDragBox, NULL);
+
+  args.GetReturnValue().Set(Undefined(isolate));
 }
 
 //register hotkey f10 while worker thread is running asynchronically
@@ -727,15 +790,16 @@ static void registerHKF10(uv_work_t *req){
 }
 void sendSygnalHK(uv_async_t *handle) {
   Isolate* isolate = Isolate::GetCurrent();
+  Local<v8::Context> context = isolate->GetCurrentContext();
   v8::HandleScope handleScope(isolate);
 
   uv_work_t *req = ((uv_work_t*) handle->data);
   Work *work = static_cast<Work*> (req->data);
 
   Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  Local<Value> argv[] = {val};
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  Local<Function>::New(isolate, work->callback)->Call(context, context->Global(), 1, argv);
 }
 void registerHKF10Async(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
@@ -825,14 +889,15 @@ static void fish(uv_work_t *req){
 
 static void fishComplete(uv_work_t *req, int status){
   Isolate* isolate = Isolate::GetCurrent();
+  Local<v8::Context> context = isolate->GetCurrentContext();
   v8::HandleScope handleScope(isolate);
   WorkFish *work = static_cast<WorkFish*>(req->data);
 
   Local<Object> obj = Object::New(isolate);
-  obj->Set(String::NewFromUtf8(isolate, "fishStatus"), Number::New(isolate, work->fishStatus));
-  Handle<Value> argv[] = {obj};
+  obj->Set(context, String::NewFromUtf8(isolate, "fishStatus").ToLocalChecked(), Number::New(isolate, work->fishStatus));
+  Local<Value> argv[] = {obj};
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  Local<Function>::New(isolate, work->callback)->Call(context, context->Global(), 1, argv);
 
   //Free up the persistent function callback
   work->callback.Reset();
@@ -872,15 +937,17 @@ static void readBlCounter(uv_work_t *req){
 
 static void readBlCounterComplete(uv_work_t *req, int status){
   Isolate* isolate = Isolate::GetCurrent();
+  Local<v8::Context> context = isolate->GetCurrentContext();
+
   v8::HandleScope handleScope(isolate);
   WorkBl*work = static_cast<WorkBl*>(req->data);
 
   Local<Object> obj = Object::New(isolate);
-  obj->Set(String::NewFromUtf8(isolate, "blCounter"), Number::New(isolate, work->counter));
-  Handle<Value> argv[] = {obj};
+  obj->Set(context, String::NewFromUtf8(isolate, "blCounter").ToLocalChecked(), Number::New(isolate, work->counter));
+  Local<Value> argv[] = {obj};
 
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  Local<Function>::New(isolate, work->callback)->Call(context, context->Global(), 1, argv);
 
   //Free up the persistent function callback
   work->callback.Reset();
@@ -953,13 +1020,14 @@ static void attackPkm(uv_work_t *req){
 
 static void attackPkmComplete(uv_work_t *req, int status){
   Isolate* isolate = Isolate::GetCurrent();
+  Local<v8::Context> context = isolate->GetCurrentContext();
   v8::HandleScope handleScope(isolate);
   WorkPkm *work = static_cast<WorkPkm*>(req->data);
 
   Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  Local<Value> argv[] = {val};
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  Local<Function>::New(isolate, work->callback)->Call(context, context->Global(), 1, argv);
 
   //Free up the persistent function callback
   work->callback.Reset();
@@ -968,11 +1036,12 @@ static void attackPkmComplete(uv_work_t *req, int status){
 
 void attackPkmAsync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
+  Local<v8::Context> context = isolate->GetCurrentContext();
 
   WorkPkm* work = new WorkPkm();
   work->request.data = work;
 
-  work->creatureAddr = args[0]->Int32Value();
+  work->creatureAddr = args[0]->Int32Value(context).ToChecked();
 
   //store the callback from JS in the work package to invoke later
   Local<Function> callback = Local<Function>::Cast(args[1]);
@@ -1078,13 +1147,15 @@ static void waitForDeath(uv_work_t *req){
 
 static void waitForDeathComplete(uv_work_t *req, int status){
   Isolate* isolate = Isolate::GetCurrent();
+  Local<v8::Context> context = isolate->GetCurrentContext();
+
   v8::HandleScope handleScope(isolate);
   Work *work = static_cast<Work*>(req->data);
 
   Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  Local<Value> argv[] = {val};
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  Local<Function>::New(isolate, work->callback)->Call(context, context->Global(), 1, argv);
 
   //Free up the persistent function callback
   work->callback.Reset();
@@ -1093,11 +1164,12 @@ static void waitForDeathComplete(uv_work_t *req, int status){
 
 void waitForDeathAsync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
+  Local<v8::Context> context = isolate->GetCurrentContext();
 
   Work* work = new Work();
   work->request.data = work;
 
-  work->creatureAddr = args[0]->Int32Value();
+  work->creatureAddr = args[0]->Int32Value(context).ToChecked();
   //store the callback from JS in the work package to invoke later
   Local<Function> callback = Local<Function>::Cast(args[1]);
   work->callback.Reset(isolate, callback);
@@ -1133,9 +1205,8 @@ static void isPkmNear(uv_work_t *req){
 
 static void isPkmNearComplete(uv_work_t *req, int status){
   Isolate* isolate = Isolate::GetCurrent();
+  Local<v8::Context> context = isolate->GetCurrentContext();
   v8::HandleScope handleScope(isolate);
-
-//  printf("isPkmNearComplete calculations started\n");
 
   WorkPkm *work = static_cast<WorkPkm*>(req->data);
   int x, y;
@@ -1149,18 +1220,18 @@ static void isPkmNearComplete(uv_work_t *req, int status){
       (abs(y)<6)&&
       (abs(work->coords[1].z - work->coords[0].z)==0)
   ){
-    obj->Set(String::NewFromUtf8(isolate, "isNear"), Number::New(isolate, 1));
-    obj->Set(String::NewFromUtf8(isolate, "posx"), Number::New(isolate, x));
-    obj->Set(String::NewFromUtf8(isolate, "posy"), Number::New(isolate, y));
+    obj->Set(context, String::NewFromUtf8(isolate, "isNear").ToLocalChecked(), Number::New(isolate, 1));
+    obj->Set(context, String::NewFromUtf8(isolate, "posx").ToLocalChecked(), Number::New(isolate, x));
+    obj->Set(context, String::NewFromUtf8(isolate, "posy").ToLocalChecked(), Number::New(isolate, y));
   }else{
-    obj->Set(String::NewFromUtf8(isolate, "isNear"), Number::New(isolate, 0));
+    obj->Set(context, String::NewFromUtf8(isolate, "isNear").ToLocalChecked(), Number::New(isolate, 0));
   }
   Local<Number> error = Number::New(isolate, 0);
-  Handle<Value> argv[] = {error, obj};
+  Local<Value> argv[] = {error, obj};
 
-  printf("executing the call back for isPkmNearComplete\n");
+  //printf("executing the call back for isPkmNearComplete\n");
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 2, argv);
+  Local<Function>::New(isolate, work->callback)->Call(context, context->Global(), 2, argv);
 
   printf("isPkmNearComplete calculations finished!\n");
 
@@ -1171,18 +1242,19 @@ static void isPkmNearComplete(uv_work_t *req, int status){
 
 void isPkmNearAsync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
+  Local<v8::Context> context = isolate->GetCurrentContext();
 
   WorkPkm* work = new WorkPkm();
   work->request.data = work;
 
-  DWORD_PTR pkmAddr = args[0]->Int32Value();
+  DWORD_PTR pkmAddr = args[0]->Int32Value(context).ToChecked();
   work->creatureAddr = pkmAddr;
 //  printf("pkmAddr: %d\n", pkmAddr);
 
   //store the callback from JS in the work package to invoke later
   if(!args[1]->IsFunction()){
     isolate->ThrowException(Exception::TypeError(
-        String::NewFromUtf8(isolate, "Arg1 isn't a function")));
+        String::NewFromUtf8(isolate, "Arg1 isn't a function").ToLocalChecked()));
     return;
   }
   Local<Function> callback = Local<Function>::Cast(args[1]);
@@ -1197,10 +1269,11 @@ void isPkmNearAsync(const FunctionCallbackInfo<Value>& args){
 
 void isPkmNearSync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
+  Local<v8::Context> context = isolate->GetCurrentContext();
 
   WorkPkm* work = new WorkPkm();
   int x, y;
-  DWORD_PTR pkmAddr = args[0]->Int32Value();
+  DWORD_PTR pkmAddr = args[0]->Int32Value(context).ToChecked();
 
   HANDLE handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
 
@@ -1225,19 +1298,20 @@ void isPkmNearSync(const FunctionCallbackInfo<Value>& args){
       (abs(y)<6)&&
       (abs(work->coords[1].z - work->coords[0].z)==0)
   ){
-    obj->Set(String::NewFromUtf8(isolate, "isNear"), Number::New(isolate, 1));
-    obj->Set(String::NewFromUtf8(isolate, "posx"), Number::New(isolate, x));
-    obj->Set(String::NewFromUtf8(isolate, "posy"), Number::New(isolate, y));
+    obj->Set(context, String::NewFromUtf8(isolate, "isNear").ToLocalChecked(), Number::New(isolate, 1));
+    obj->Set(context, String::NewFromUtf8(isolate, "posx").ToLocalChecked(), Number::New(isolate, x));
+    obj->Set(context, String::NewFromUtf8(isolate, "posy").ToLocalChecked(), Number::New(isolate, y));
   }else{
-    obj->Set(String::NewFromUtf8(isolate, "isNear"), Number::New(isolate, 0));
+    obj->Set(context, String::NewFromUtf8(isolate, "isNear").ToLocalChecked(), Number::New(isolate, 0));
   }
-  Handle<Value> argv[] = {obj};
+  Local<Value> argv[] = {obj};
 
   args.GetReturnValue().Set(obj);
 }
 
 void isPlayerPkmSummonedSync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
+  Local<v8::Context> context = isolate->GetCurrentContext();
 
   DWORD address;
   int statusSummoned;
@@ -1253,27 +1327,267 @@ void isPlayerPkmSummonedSync(const FunctionCallbackInfo<Value>& args){
   CloseHandle(handle);
 
   Local<Object> obj = Object::New(isolate);
-  obj->Set(String::NewFromUtf8(isolate, "status"), Number::New(isolate, statusSummoned));
-  Handle<Value> argv[] = {obj};
+  obj->Set(context, String::NewFromUtf8(isolate, "status").ToLocalChecked(), Number::New(isolate, statusSummoned));
+  Local<Value> argv[] = {obj};
 
   args.GetReturnValue().Set(obj);
+}
+
+void dragItemtoBellow(){
+  INPUT input, input2[2];
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+
+  //move mouse
+  input.type = INPUT_MOUSE;
+  input.mi.dx = (center.x+sqm.x)*65535/SCREEN_X;
+  input.mi.dy = center.y*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(50);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+  SendInput(2, input2, sizeof(INPUT));
+
+  Sleep(50);
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+  input.type = INPUT_MOUSE;
+  input.mi.time = 0;
+  input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(50);
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+  //move mouse
+  input.type = INPUT_MOUSE;
+  input.mi.dx = (center.x+sqm.x)*65535/SCREEN_X;
+  input.mi.dy = (center.y+sqm.y)*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(50);
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+  input.type = INPUT_MOUSE;
+  input.mi.time = 0;
+  input.mi.dwFlags  = MOUSEEVENTF_LEFTUP;
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(50);
+
+  //SetCursorPos(center.x+sqm.x*cProfile->commands[i].pos[0], center.y+sqm.y*cProfile->commands[i].pos[1]);
+}
+
+void revivePokemon(){
+  INPUT input, input2[2], input3[3];
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+
+  //move mouse to pkmSlot position
+  input.type = INPUT_MOUSE;
+  input.mi.dx = pkmSlot.x*65535/SCREEN_X;
+  input.mi.dy = pkmSlot.y*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(50);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+  SendInput(2, input2, sizeof(INPUT));
+
+  Sleep(50);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+  input2[0].type = INPUT_KEYBOARD;
+  input2[0].ki.wScan = 0; // hardware scan code for key
+  input2[0].ki.time = 0;
+  input2[0].ki.dwExtraInfo = 0;
+  // Press the "CTRL" key
+  input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+  input2[0].ki.dwFlags = 0; // 0 for key press
+
+  //use revive by Hotkey DEL 
+  input2[1].type = INPUT_KEYBOARD;
+  input2[1].ki.wScan = 0; // hardware scan code for key
+  input2[1].ki.time = 0;
+  input2[1].ki.dwExtraInfo = 0;
+  input2[1].ki.wVk = 0x2E; // virtual-key code for the "DEL" key
+  input2[1].ki.dwFlags = 0; // 0 for key press
+
+  SendInput(2, input2,sizeof(INPUT));
+
+  Sleep(200);
+
+  //Release of "CTRL" key
+  input2[0].type = INPUT_KEYBOARD;
+  input2[0].ki.wScan = 0; // hardware scan code for key
+  input2[0].ki.time = 0;
+  input2[0].ki.dwExtraInfo = 0;
+  input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
+  input2[0].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+  //Release of "DEL" key
+  input2[1].type = INPUT_KEYBOARD;
+  input2[1].ki.wScan = 0; // hardware scan code for key
+  input2[1].ki.time = 0;
+  input2[1].ki.dwExtraInfo = 0;
+  input2[1].ki.wVk = 0x2E; // virtual-key code for the "DEL" key
+  input2[1].ki.dwFlags  = KEYEVENTF_KEYUP;
+
+  SendInput(2, input2, sizeof(INPUT));
+
+  Sleep(50);
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+
+  //move mouse to pkmSlot position
+  input.type = INPUT_MOUSE;
+  input.mi.dx = pkmSlot.x*65535/SCREEN_X;
+  input.mi.dy = pkmSlot.y*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+ 
+  Sleep(50);
+  
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  //left click to use revive on pkm
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags  = MOUSEEVENTF_LEFTUP;
+
+  SendInput(2,input2,sizeof(INPUT));
+
+  Sleep(240);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+
+  SendInput(2, input2, sizeof(INPUT));
+}
+
+void swapPokemon(){
+  INPUT input, input2[2], input4[4];
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+  //move mouse to pkmSlot position
+  input.type = INPUT_MOUSE;
+  input.mi.dx = pkmSlot.x*65535/SCREEN_X;
+  input.mi.dy = pkmSlot.y*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+ 
+  Sleep(50);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+  SendInput(2, input2, sizeof(INPUT));
+
+  Sleep(50);
+  
+  ::ZeroMemory(&input, sizeof(INPUT));
+  input.type = INPUT_MOUSE;
+  input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
+  input.mi.time = 0;
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(100);
+
+  ::ZeroMemory(&input, sizeof(INPUT));
+  input.type = INPUT_MOUSE;
+  input.mi.dx = (pkmSlot.x+20)*65535/SCREEN_X;
+  input.mi.dy = pkmSlot.y*65535/SCREEN_Y;
+  input.mi.time = 0;
+  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+  SendInput(1, &input, sizeof(INPUT));
+
+  Sleep(100);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_LEFTUP;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.dx = pkmSlot.x*65535/SCREEN_X;
+  input2[1].mi.dy = pkmSlot.y*65535/SCREEN_Y;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+
+  SendInput(2,input2,sizeof(INPUT));
+
+  Sleep(100);
+
+  ::ZeroMemory(input2, 2*sizeof(INPUT));
+
+  input2[0].type = INPUT_MOUSE;
+  input2[0].mi.time = 0;
+  input2[0].mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
+
+  input2[1].type = INPUT_MOUSE;
+  input2[1].mi.time = 0;
+  input2[1].mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
+
+  SendInput(2, input2, sizeof(INPUT));
 }
 
 void revivePkmSync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
 
   Work* work = new Work();
-  POINT pkmSlot;
   //POINT pkmSlot, reviveSlot;
   INPUT input, input2[2], input3[3];
 
+/*
   Local<Object> centerObj = args[0]->ToObject();
   Local<Value> x = centerObj->Get(String::NewFromUtf8(isolate, "x"));
   Local<Value> y = centerObj->Get(String::NewFromUtf8(isolate, "y"));
   pkmSlot.x = x->Int32Value();
   pkmSlot.y = y->Int32Value();
 
-/*
   Local<Object> sqmObj = args[1]->ToObject();
   x = sqmObj->Get(String::NewFromUtf8(isolate, "x"));
   y = sqmObj->Get(String::NewFromUtf8(isolate, "y"));
@@ -1362,93 +1676,22 @@ void revivePkmSync(const FunctionCallbackInfo<Value>& args){
 
   SendInput(3, input3, sizeof(INPUT));
 
-  /*OLD Revive function
-
-  //move and click revive in revive slot
-  input.type = INPUT_MOUSE;
-  input.mi.dx = reviveSlot.x*65535/SCREEN_X;
-  input.mi.dy = reviveSlot.y*65535/SCREEN_Y;
-  input.mi.time = 0;
-  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
-  SendInput(1, &input, sizeof(INPUT));
-  //SetCursorPos(reviveSlot.x, reviveSlot.y);
-
-  Sleep(50);
-
-  input.type      = INPUT_MOUSE;
-  input.mi.time = 0;
-  input.mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
-  SendInput(1,&input,sizeof(INPUT));
-
-  Sleep(50);
-
-  input.type      = INPUT_MOUSE;
-  input.mi.time = 0;
-  input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
-  SendInput(1,&input,sizeof(INPUT));
-
-  Sleep(40);
-
-  //point to pkmslot and use selected revive
-  //sendinput with mousemovement is smoothly. it simulated mouse movements instead of flickering from a position to another
-  input.type = INPUT_MOUSE;
-  input.mi.dx = pkmSlot.x*65535/SCREEN_X;
-  input.mi.dy = pkmSlot.y*65535/SCREEN_Y;
-  input.mi.time = 0;
-  input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
-  SendInput(1, &input, sizeof(INPUT));
-  //SetCursorPos(pkmSlot.x, pkmSlot.y);
-
-  Sleep(40);
-
-  input.type      = INPUT_MOUSE;
-  input.mi.time = 0;
-  input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
-  SendInput(1,&input,sizeof(INPUT));
-
-  Sleep(50);
-
-  input.type      = INPUT_MOUSE;
-  input.mi.time = 0;
-  input.mi.dwFlags  = MOUSEEVENTF_LEFTUP;
-  SendInput(1,&input,sizeof(INPUT));
-
-  Sleep(40);
-
-  //summon pokemon
-  SetCursorPos(pkmSlot.x, pkmSlot.y);
-
-  Sleep(125);
-
-  input.type      = INPUT_MOUSE;
-  input.mi.time = 0;
-  input.mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;
-  SendInput(1,&input,sizeof(INPUT));
-
-  Sleep(80);
-
-  input.type      = INPUT_MOUSE;
-  input.mi.time = 0;
-  input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;
-  SendInput(1,&input,sizeof(INPUT));
-  */
-
   Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  Local<Value> argv[] = {val};
 
   args.GetReturnValue().Set(val);
 }
 
 static void registerHkRevivePkm(uv_work_t *req){
 
-  Work *work = static_cast<Work*>(req->data);
+  WorkHk *work= static_cast<WorkHk*>(req->data);
 
   //fill the global var screen resolution
   SCREEN_X = GetSystemMetrics(SM_CXSCREEN);
   SCREEN_Y = GetSystemMetrics(SM_CYSCREEN);
 
   //0x2E (delete)
-  if(RegisterHotKey(NULL, 1, NULL, 0x2E)){
+  if(RegisterHotKey(NULL, 1, NULL, work->keyCode)){
     MSG msg = {0};
 
     while (GetMessage(&msg, NULL, 0, 0) != 0){
@@ -1458,41 +1701,95 @@ static void registerHkRevivePkm(uv_work_t *req){
         //UnregisterHotKey(NULL, 1);
 
         //Communication between threads(uv_work_t and uv_async_t);
-        work->async.data = (void*) req;
-        uv_async_send(&work->async);
+        //work->async.data = (void*) req;
+        revivePokemon();
+        //uv_async_send(&work->async);
       }
     }
   }
 }
-void sendSygnalHkRevivePkm(uv_async_t *handle) {
-  Isolate* isolate = Isolate::GetCurrent();
-  v8::HandleScope handleScope(isolate);
-
-  uv_work_t *req = ((uv_work_t*) handle->data);
-  Work *work = static_cast<Work*> (req->data);
-
-  Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
-  //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
-}
 void registerHkRevivePkmAsync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
+  Local<v8::Context> context = isolate->GetCurrentContext();
 
-  Work* work = new Work();
+  WorkHk* work = new WorkHk();
   work->request.data = work;
 
+  work->keyCode = args[0]->Int32Value(context).ToChecked();
   //store the callback from JS in the work package to invoke later
-  Local<Function> callback = Local<Function>::Cast(args[0]);
+  Local<Function> callback = Local<Function>::Cast(args[1]);
   work->callback.Reset(isolate, callback);
 
   //worker thread using libuv
-  uv_async_init(uv_default_loop(), &work->async, sendSygnalHkRevivePkm);
+  //uv_async_init(uv_default_loop(), &work->async, sendSygnalHkRevivePkm);
   uv_queue_work(uv_default_loop(), &work->request, registerHkRevivePkm, NULL);
 
   args.GetReturnValue().Set(Undefined(isolate));
 }
 
+//register hotkey for swapPokemon
+static void registerHkSwapPkm(uv_work_t *req){
+  WorkHk *work = static_cast<WorkHk*>(req->data);
+
+  //fill the global var screen resolution
+  SCREEN_X = GetSystemMetrics(SM_CXSCREEN);
+  SCREEN_Y = GetSystemMetrics(SM_CYSCREEN);
+
+  if(RegisterHotKey(NULL, 1, NULL, work->keyCode)){
+    MSG msg = {0};
+
+    //printf("Running as PID=%d\n",getpid());
+
+    while (GetMessage(&msg, NULL, 0, 0) != 0 ){
+      if(msg.message == WM_HOTKEY){
+        fPause = !fPause;
+        //UnregisterHotKey(NULL, 1);
+
+        swapPokemon();
+        //Communication between threads(uv_work_t and uv_async_t);
+        work->async.data = (void*) req;
+        //uv_async_send(&work->async);
+      }
+    }
+  }
+}
+void registerHkSwapPkmAsync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+  Local<v8::Context> context = isolate->GetCurrentContext();
+
+  WorkHk* work = new WorkHk();
+  work->request.data = work;
+
+  work->keyCode = args[0]->Int32Value(context).ToChecked();
+  //store the callback from JS in the work package to invoke later
+  Local<Function> callback = Local<Function>::Cast(args[1]);
+  work->callback.Reset(isolate, callback);
+
+  //worker thread using libuv
+  //uv_async_init(uv_default_loop(), &work->async, sendSygnalHKSwapPkm);
+  uv_queue_work(uv_default_loop(), &work->request, registerHkSwapPkm, NULL);
+
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
+
+void registerPkmSlotSync(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = args.GetIsolate();
+  Local<v8::Context> context = isolate->GetCurrentContext();
+
+  Work* work = new Work();
+
+  Local<Object> centerObj = args[0]->ToObject(context).ToLocalChecked();
+  Local<Value> x = centerObj->Get(context, String::NewFromUtf8(isolate, "x").ToLocalChecked()).ToLocalChecked();
+  Local<Value> y = centerObj->Get(context, String::NewFromUtf8(isolate, "y").ToLocalChecked()).ToLocalChecked();
+  pkmSlot.x = x->Int32Value(context).ToChecked();
+  pkmSlot.y = y->Int32Value(context).ToChecked();
+
+  Local<Number> val = Number::New(isolate, 1);
+  Local<Value> argv[] = {val};
+
+  args.GetReturnValue().Set(val);
+}
 
 Coords getPlayerPosC(){
   Coords coords;
@@ -1570,6 +1867,7 @@ static void getPlayerPos(uv_work_t *req){
 }
 static void getPlayerPosComplete(uv_work_t *req, int status){
   Isolate* isolate = Isolate::GetCurrent();
+  Local<v8::Context> context = isolate->GetCurrentContext();
   v8::HandleScope handleScope(isolate);
 
   WorkPkm *work = static_cast<WorkPkm*>(req->data);
@@ -1580,14 +1878,14 @@ static void getPlayerPosComplete(uv_work_t *req, int status){
   y = work->coords[0].y;
   z = work->coords[0].z;
 
-  obj->Set(String::NewFromUtf8(isolate, "posx"), Number::New(isolate, x));
-  obj->Set(String::NewFromUtf8(isolate, "posy"), Number::New(isolate, y));
-  obj->Set(String::NewFromUtf8(isolate, "posz"), Number::New(isolate, z));
+  obj->Set(context, String::NewFromUtf8(isolate, "posx").ToLocalChecked(), Number::New(isolate, x));
+  obj->Set(context, String::NewFromUtf8(isolate, "posy").ToLocalChecked(), Number::New(isolate, y));
+  obj->Set(context, String::NewFromUtf8(isolate, "posz").ToLocalChecked(), Number::New(isolate, z));
 
   //prepare error vars
-  Handle<Value> argv[] = {obj};
+  Local<Value> argv[] = {obj};
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  Local<Function>::New(isolate, work->callback)->Call(context, context->Global(), 1, argv);
 
   //Free up the persistent function callback
   work->callback.Reset();
@@ -1729,7 +2027,7 @@ static void runProfile(uv_work_t *req){
         input2[0].ki.wVk = 0x11; // virtual-key code for the "CTRL" key
         input2[0].ki.dwFlags = 0; // 0 for key press
 
-        //use revive by Hotkey DEL 
+        //use revive by Hotkey PAGE DOWN 
         input2[1].type = INPUT_KEYBOARD;
         input2[1].ki.wScan = 0; // hardware scan code for key
         input2[1].ki.time = 0;
@@ -1783,15 +2081,16 @@ static void runProfile(uv_work_t *req){
 }
 static void runProfileComplete(uv_work_t *req, int status){
   Isolate* isolate = Isolate::GetCurrent();
+  Local<v8::Context> context = isolate->GetCurrentContext();
   v8::HandleScope handleScope(isolate);
 
   WorkProfile *work = static_cast<WorkProfile*>(req->data);
 
   //prepare error vars
   Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  Local<Value> argv[] = {val};
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  Local<Function>::New(isolate, work->callback)->Call(context, context->Global(), 1, argv);
 
   //Free up the persistent function callback
   work->callback.Reset();
@@ -1799,34 +2098,45 @@ static void runProfileComplete(uv_work_t *req, int status){
 }
 void sendSygnalProfile(uv_async_t *handle) {
   Isolate* isolate = Isolate::GetCurrent();
+  Local<v8::Context> context = isolate->GetCurrentContext();
   v8::HandleScope handleScope(isolate);
 
   uv_work_t *req = ((uv_work_t*) handle->data);
   WorkProfile *work = static_cast<WorkProfile*> (req->data);
 
   Local<Object> obj = Object::New(isolate);
-  obj->Set(String::NewFromUtf8(isolate, "cmdPos"), Number::New(isolate, work->cmdPos));
+  obj->Set(context, String::NewFromUtf8(isolate, "cmdPos").ToLocalChecked(), Number::New(isolate, work->cmdPos));
 
-  Handle<Value> argv[] = {obj};
+  Local<Value> argv[] = {obj};
   //execute the callback
-  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+  Local<Function>::New(isolate, work->callback)->Call(context, context->Global(), 1, argv);
 }
+
+std::string convertToStdString(Isolate *isolate, Local<String> v8String) {
+  char* fileNameChar = new char[v8String->Utf8Length(isolate)]; 
+  (*v8String)->WriteUtf8(isolate, fileNameChar);
+  std::string fileNameUTF8;
+  fileNameUTF8.assign(fileNameChar);
+  delete fileNameChar;
+}
+
 void runProfileAsync(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
+  Local<v8::Context> context = isolate->GetCurrentContext();
 
   WorkProfile* work = new WorkProfile();
   work->request.data = work;
 
   //Mapping JavaScript object to C++ class
-  Local<Object> obj = args[0]->ToObject();
+  Local<Object> obj = args[0]->ToObject(context).ToLocalChecked();
+  Local<String> fileNameString = obj->Get(context, String::NewFromUtf8(isolate, "fileName").ToLocalChecked()).ToLocalChecked().As<String>();
 
-  Local<Value> fileNameValue = obj->Get(String::NewFromUtf8(isolate, "fileName"));
-  v8::String::Utf8Value filename_utfValue(fileNameValue);
+  std::string fileNameUTF8 = convertToStdString(isolate, fileNameString);
 
   Local<Array> contentArray = Local<Array>::Cast(
-      obj->Get(
-        String::NewFromUtf8(isolate, "content")
-      )
+      obj->Get(context,
+        String::NewFromUtf8(isolate, "content").ToLocalChecked()
+      ).ToLocalChecked()
   );
   int contentLength = contentArray->Length();
 
@@ -1835,8 +2145,8 @@ void runProfileAsync(const FunctionCallbackInfo<Value>& args){
   //ContentProfile *cProfile = (ContentProfile*)malloc(contentLength*sizeof(struct commandList)+sizeof(struct contentProfile*));
   work->profile = cProfile;
 
-  cProfile->fileName = (char*)malloc(filename_utfValue.length()+1);
-  strcpy(cProfile->fileName, std::string(*filename_utfValue, filename_utfValue.length()).c_str());
+  cProfile->fileName = (char*)malloc(fileNameUTF8.length()+1);
+  strcpy(cProfile->fileName, fileNameUTF8.c_str());
 
   cProfile->sizeCommandList = contentLength;
 
@@ -1852,49 +2162,48 @@ void runProfileAsync(const FunctionCallbackInfo<Value>& args){
     arrObj = Local<Object>::Cast(contentArray->Get(i));
 
     //read cmdType
-    cmdTypeValue = arrObj->Get(String::NewFromUtf8(isolate, "cmdType"));
-    v8::String::Utf8Value cmdType_utfValue(cmdTypeValue);
-    cmdType = std::string(*cmdType_utfValue, cmdType_utfValue.length()).c_str();
+    cmdTypeValue = arrObj->Get(context, String::NewFromUtf8(isolate, "cmdType").ToLocalChecked()).ToLocalChecked();
+    cmdType = convertToStdString(isolate, cmdTypeValue.As<String>());
+    
     //malloc cmdType char*
     cProfile->commands[i].cmdType = (char*)malloc(strlen(cmdType.c_str())+1);
     strcpy(cProfile->commands[i].cmdType, cmdType.c_str());
 
     //check what command you have and execute the command
     if(strcmp(cProfile->commands[i].cmdType, "sleep") == 0){
-      value = arrObj->Get(String::NewFromUtf8(isolate, "value"));
-      cProfile->commands[i].value = value->Int32Value();
+      value = arrObj->Get(context, String::NewFromUtf8(isolate, "value").ToLocalChecked()).ToLocalChecked();
+      cProfile->commands[i].value = value->Int32Value(context).ToChecked();
     }else if(strcmp(cProfile->commands[i].cmdType, "check") == 0){
       posArray = Local<Array>::Cast(
-        arrObj->Get(
-          String::NewFromUtf8(isolate, "pos")
-        )
+        arrObj->Get(context,
+          String::NewFromUtf8(isolate, "pos").ToLocalChecked()
+        ).ToLocalChecked()
       );
 
       for(unsigned int j=0; j < posArray->Length(); j++ ){
         value = Local<Value>::Cast(posArray->Get(j));
-        cProfile->commands[i].pos[j] = value->Int32Value();
+        cProfile->commands[i].pos[j] = value->Int32Value(context).ToChecked();
       }
     }else if(strcmp(cProfile->commands[i].cmdType, "mouseclick") == 0){
       //read positions to cProfile struct
       posArray = Local<Array>::Cast(
-        arrObj->Get(
-          String::NewFromUtf8(isolate, "pos")
-        )
+        arrObj->Get(context,
+          String::NewFromUtf8(isolate, "pos").ToLocalChecked()
+        ).ToLocalChecked()
       );
 
       for(unsigned int j=0; j < posArray->Length(); j++ ){
         value = Local<Value>::Cast(posArray->Get(j));
-        cProfile->commands[i].pos[j] = value->Int32Value();
+        cProfile->commands[i].pos[j] = value->Int32Value(context).ToChecked();
       }
 
       //read clickType (left or right) to cProfile struct
-      clickTypeValue = arrObj->Get(String::NewFromUtf8(isolate, "clickType"));
-      v8::String::Utf8Value clickType_utfValue(clickTypeValue);
-      clickType = std::string(*clickType_utfValue, clickType_utfValue.length()).c_str();
+      clickTypeValue = arrObj->Get(context, String::NewFromUtf8(isolate, "clickType").ToLocalChecked()).ToLocalChecked();
+      clickType = convertToStdString(isolate, clickTypeValue.As<String>());
+
       //malloc clickType char*
       cProfile->commands[i].clickType = (char*)malloc(strlen(clickType.c_str())+1);
       strcpy(cProfile->commands[i].clickType, clickType.c_str());
-
     }
 
   }
@@ -1920,7 +2229,7 @@ void stopProfileSync(const FunctionCallbackInfo<Value>& args){
   //printf("fCaveBot: %d\n", fCaveBot);
 
   Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  Local<Value> argv[] = {val};
 
   args.GetReturnValue().Set(val);
 }
@@ -1952,7 +2261,7 @@ void sendKey(const FunctionCallbackInfo<Value>& args){
   Sleep(50);
 
   Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  Local<Value> argv[] = {val};
 
   args.GetReturnValue().Set(val);
 }
@@ -1999,6 +2308,70 @@ int DNcheckCurrPkmLife(){
   return 1;
 }
 
+void mapUnownMovementSync(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<v8::Context> context = isolate->GetCurrentContext();
+
+  Work* work = new Work();
+  DWORD unownAddress;
+  HANDLE handle;
+
+  Local<Object> centerObj = args[0]->ToObject(context).ToLocalChecked();
+  Local<Value> addr = centerObj->Get(context, String::NewFromUtf8(isolate, "address").ToLocalChecked()).ToLocalChecked();
+  unownAddress = addr->Int32Value(context).ToChecked();
+  //pkmSlot.x = x->Int32Value();
+  //pkmSlot.y = y->Int32Value();
+  printf("unownAddress: 0x%d\n", (int)unownAddress);
+  printf("unownAddress: 0x%X\n", unownAddress);
+
+  handle = OpenProcess(PROCESS_VM_READ, FALSE, pid);
+
+  int i=0, oldPosy=0, newPosy;
+
+  while(i<25){ 
+    ReadProcessMemory(handle, (LPDWORD)(unownAddress+OFFSET_PKM_POSY), &newPosy, 4, NULL);
+    if(oldPosy==0){
+      oldPosy = newPosy;
+    }else if(oldPosy!=newPosy){
+      if(newPosy>oldPosy){
+        printf("newPosy: %d ", newPosy);
+        printf("Down\n");
+      }else{
+        printf("newPosy: %d ", newPosy);
+        printf("Up\n");
+      }
+      oldPosy = newPosy;
+      i++;
+    }
+    if(newPosy==65535){
+      //break
+      i=25;
+    }
+  }
+
+  Local<Object> obj = Object::New(isolate);
+  obj->Set(context, String::NewFromUtf8(isolate, "pos").ToLocalChecked(), Number::New(isolate, 8));
+  Local<Value> argv[] = {obj};
+
+  args.GetReturnValue().Set(obj);
+
+  //local<number> val = number::new(isolate, 1);
+  //handle<value> argv[] = {val};
+  //args.GetReturnValue().Set(val);
+
+  /*
+  Local<Object> obj = Object::New(isolate);
+  obj->Set(String::NewFromUtf8(isolate, "fishStatus"), Number::New(isolate, work->fishStatus));
+  Handle<Value> argv[] = {obj};
+  //execute the callback
+  Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
+  //Free up the persistent function callback
+  work->callback.Reset();
+  delete work;
+  */
+}
+
 void testread(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = args.GetIsolate();
 
@@ -2021,7 +2394,7 @@ void testread(const FunctionCallbackInfo<Value>& args){
   printf("baseCurrPkmLife+3C8: 0x%X\n", baseCurrPkmLife+OFFSET_CURR_PKM_LIFE);
 
   Local<Number> val = Number::New(isolate, 1);
-  Handle<Value> argv[] = {val};
+  Local<Value> argv[] = {val};
 
   args.GetReturnValue().Set(val);
 }
@@ -2038,10 +2411,14 @@ void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "isPkmNearSync", isPkmNearSync);
   NODE_SET_METHOD(exports, "isPlayerPkmSummoned", isPlayerPkmSummonedSync);
   NODE_SET_METHOD(exports, "revivePkm", revivePkmSync);
+  NODE_SET_METHOD(exports, "registerHkSwapPkm", registerHkSwapPkmAsync);
   NODE_SET_METHOD(exports, "registerHkRevivePkm", registerHkRevivePkmAsync);
+  NODE_SET_METHOD(exports, "registerHkDragBox", registerHkDragBoxAsync);
+  NODE_SET_METHOD(exports, "registerPkmSlot", registerPkmSlotSync);
   NODE_SET_METHOD(exports, "getPlayerPos", getPlayerPosAsync);
   NODE_SET_METHOD(exports, "runProfile", runProfileAsync);
   NODE_SET_METHOD(exports, "stopProfileSync", stopProfileSync);
+  NODE_SET_METHOD(exports, "mapUnownMovementSync", mapUnownMovementSync);
   NODE_SET_METHOD(exports, "testread", testread);
 //  NODE_SET_METHOD(exports, "sendKey", sendKey);
 }

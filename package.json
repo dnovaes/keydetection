@@ -7,12 +7,17 @@
     "async-lock": "^1.0.0"
   },
   "devDependencies": {
-    "electron-rebuild": "^1.7.3",
-    "electron": "^1.8.4"
+    "electron": "^v6.1.9",
+    "electron-rebuild": "^1.8.8"
   },
   "scripts": {
     "start": "electron .",
-    "build": "node-gyp rebuild && electron-rebuild"
+    "build": "node-gyp build",
+    "configure": "node-gyp configure",
+    "rebuild": "node-gyp rebuild",
+    "electron-rebuild": "electron-rebuild",
+    "clean": "node-gyp clean",
+    "version": "node-gyp -v"
   },
   "repository": {
     "type": "git",
