@@ -5,15 +5,11 @@ body{
 }
 
 #title{
-  margin-top: 15px;
-}
-
-#img_title{/* span */
-  display: block;
-  width: 250px;
-  height: 50px;
-  background: url(../assets/imgs/title.png) no-repeat;
-  background-size: contain;
+  display: flex;
+  justify-content: center;
+  font-family: pokemons;
+  font-size: 30px;
+  height: 80px;
 }
 
 #container{
@@ -108,10 +104,6 @@ div.loginEl input{
 @font-face{
   font-family: pokemons;
   src: url("Pokemon Solid.ttf");
-}
-
-#title{
-  font-family: pokemonh;
 }
 
 .loginEl{
