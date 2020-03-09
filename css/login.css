@@ -5,12 +5,13 @@ body{
 }
 
 #title{
+  display: flex;
+  justify-content: center;
   margin-top: 15px;
 }
 
 #img_title{/* span */
-  display: block;
-  width: 250px;
+  width: 215px;
   height: 50px;
   background: url(../assets/imgs/title.png) no-repeat;
   background-size: contain;
