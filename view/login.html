@@ -7,11 +7,8 @@
   </head>
   <body style="-webkit-app-region: drag">
   <div id="container">
-
-    <div id="close-icon" style="-webkit-app-region: no-drag"></div>
-
     <div id="container-left">
-      <img src="../img/trainerred.png" id="background_pkm">
+      <img id="background_pkm">
     </div>
     <div id="container-right">
       <div id="title">
@@ -43,9 +40,10 @@
         </div>
       </div>
     </div>
+    <div id="close-icon" style="-webkit-app-region: no-drag"></div>
   </div>
   </body>
-  <!--<script type="text/javascript" src="bobito.js"></script>-->
+
   <script type="text/javascript">
     const {remote, shell} = require('electron');
     const crypto = require('crypto');

@@ -8,7 +8,18 @@ let win
 
 function createWindow () {
   // Create the browser window. backgroundThrottling: false
-  win = new BrowserWindow({width: 460, height: 310, frame: false, resizable: false })
+  win = new BrowserWindow({
+    titleBarStyle: 'hidden',
+    width: 460,
+    height: 305,
+    frame: false,
+    resizable: false,
+    backgroundColor: '#000000',
+    show: false,
+    webPreferences: {
+      nodeIntegration: true
+    }
+  })
   win.setMenu(null);
 
   // and load the index.html of the app.
@@ -17,7 +28,10 @@ function createWindow () {
     protocol: 'file:',
     slashes: true
   }))
-  win.show();
+
+  win.once('ready-to-show', () => {
+    win.show();
+  })
 
   // Open the DevTools.
   //win.webContents.openDevTools()
@@ -65,3 +79,7 @@ app.on('activate', () => {
     createWindow()
   }
 })
+
+process.on('uncaughtException', (err) => {
+  console.log(err);
+});
