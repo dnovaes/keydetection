@@ -12,14 +12,13 @@ body{
   display: block;
   width: 250px;
   height: 50px;
-  background: url(../img/title.png) no-repeat;
+  background: url(../assets/imgs/title.png) no-repeat;
   background-size: contain;
 }
 
 #container{
-  width: 450px;
+  display: flex;
   margin: 0 auto;
-  height: 300px;
   color: white;
   background: red;
   background: linear-gradient(#774247, red);
@@ -28,31 +27,27 @@ body{
 
 #container-left{
   width: 180px;
-  height: 300px;
-  float: left;
 }
 
 #container-right{
-  width: 225px;
-  height: 300px;
-  float: left;
+  width: 255px;
 }
 
 @keyframes redeyes{
   0% {
-    content: url("../img/trainerred.png");
+    content: url("../assets/imgs/trainerred.png");
     opacity:1;
   }
   33% {
-    content: url("../img/trainerred_right.png");
+    content: url("../assets/imgs/trainerred_right.png");
     opacity:1;
   }
   66%{
-    content: url("../img/trainerred_sleep.png");
+    content: url("../assets/imgs/trainerred_sleep.png");
     opacity:1;
   }
   100%{
-    content: url("../img/trainerred_sleep.png");
+    content: url("../assets/imgs/trainerred_sleep.png");
     opacity:1;
   }
 }
@@ -92,7 +87,7 @@ div.loginEl input{
 
 #login_button{
   color: #cb1a1c;
-  //background: url(../img/textures_dark_vertical.jpg) repeat;
+  background: url(../assets/imgs/textures_dark_vertical.jpg) repeat;
   background: black;
   background: linear-gradient(black, #aa0004);
   width: 150px;
@@ -142,11 +137,11 @@ div.loginEl input{
 
 @keyframes cf3FadeInOut {
   0% {
-    content: url("../img/cyndablue.png");
+    content: url("../assets/imgs/cyndablue.png");
     opacity:1;
   }
   100% {
-    content: url("../img/cynda.png");
+    content: url("../assets/imgs/cynda.png");
     opacity:1;
   }
 }
@@ -171,7 +166,7 @@ div.loginEl input{
 }
 
 #discordBtn{
-  background-image: url("../img/discordbanner.png");
+  background-image: url("../assets/imgs/discordbanner.png");
   background-size: contain;
   width: 120px;
   height: 40px;
@@ -201,7 +196,7 @@ div.loginEl input{
   width: 40px;
   height: 40px;
   float: left;
-  background-image: url("../img/bobito_icon.png");
+  background-image: url("../assets/imgs/bobito_icon.png");
   background-repeat: no-repeat;
   background-size: contain;
 }
@@ -218,10 +213,10 @@ div.loginEl input{
 }
 
 #close-icon{
-  float: right;
+  align-self: flex-start;
   width: 13px;
   height: 13px;
-  background-image: url("../img/close.png");
+  background-image: url("../assets/imgs/close.png");
   background-repeat: no-repeat;
   background-size: contain;
   opacity: 0.3;
