@@ -1,21 +1,28 @@
 # Bobito's App
 
-Virtual Assistant Application for a specific game (Tibia Platform) for Learning Purposes in Security Area involving:
+Virtual Assistant Application for Tibia OtServers. This project is for learning purposes in Security Area involving:
+
 - Code Injection
 - Memory Reading
-- Intercomunication between client and a external program.
+- Intercomunication between exe client and a external program without using APIs
+- Automated Tasks (Bot alike)
 
 App Requisites:
 - Windows ONLY
-- Client in Dx9 version
+- Client running in Dx9 version (Memory values are changed in different versions)
 
-# Installation
+## Installation
 
-Install nodejs from the official website (6.11+, with npm of course)
-Install as global: node-gyp, windows-build-tools for python2.7 and Microsoft Visual C++ DevLib using the command bellow. Don't forget to execute CLI of the windows as admninistrator power. Do not use git bash or other unix substitute for windows to run this.
+1 - Install Nodejs from the official website **Node.js 12.12.0, NPM 6.11.3, Node-gyp 6.1.0** 
+https://nodejs.org/download/release/v12.12.0/node-v12.12.0-x64.msi 
 
+~~Node-gyp, Windows-build-tools for python2.7 and Microsoft Visual C++ DevLib using the command bellow.~~
+
+Don't forget to execute CLI of the windows as admninistrator power. Do not use git bash or other unix substitute for windows to run this.
+
+2- node-gyp and windows-build-tools
 ```
-npm install -g node-gyp
+npm install -g node-gyp@6.1.0
 npm install -g --add-python-to-path='true' --production windows-build-tools
 ```
 
@@ -23,12 +30,14 @@ After receiving the message of success. Like this one
 
 ![success-install](https://i.imgur.com/Z6ITFwb.png)
 
-You can check if python is already added in path by typing:
-```
-echo $PATH
-```
+Last Version checked: **2.7.15 -> python-2.7.15.amd64.msi** 
 
-If not... stay a while and listen :]. The enviroment path variables at windows stays at the global variable "PATH". To add python variable to path, check first where is your python2.7 path, go to control painel of your windows and add the path at the end of PATH variable as the picture below shows.
+Wanna check if package was installed globally by npm?\
+```npm list -g windows-build-tools```
+
+Wanna check if python is added in path?
+
+The enviroment path variables at windows stays at the global variable "PATH". To add python variable to path, check first where is your python2.7 path, go to control painel of your windows and add the path at the end of PATH variable as the picture below shows.
 
 ![python27-path](https://i.imgur.com/gaVdnMA.png)
 
@@ -36,37 +45,36 @@ git clone this project and install dependencies
 ```
 git clone https://github.com/dnovaes/keydetection.git
 cd keydetection/
-npm install electron --save
-npm install electron-rebuild --save-dev
-npm install node-gyp --save-dev
 npm install
 ```
 
-Now the magic as last step. Rebuild your native modules for electron to work even with your other
-native modules (C++ in this case). And start the application.
+If needed you can set your own path to your node-gyp version\
+```npm config set node_gyp "node .\node_modules\node-gyp\bin\node-gyp.js"```
+
+## Running the App
+
+Rebuild your native modules for electron to work with the proper version of node-gyp and start the application.
 ```
-npm run build
+npm run electron-rebuild
 npm start
 ```
-or run, if the code above didnt work:
+or if the code above didnt work:
 ```
 ./node_modules/.bin/electron-rebuild.cmd
 npm start
 ```
 Note: If you're using Linux Bash for Windows, [see this guide](https://www.howtogeek.com/261575/how-to-run-graphical-linux-desktop-applications-from-windows-10s-bash-shell/) or use `node` from the command prompt.
 
-# Issues
+## Issues
 
-if you still have any issues with python enviroment variables, check this thread: https://github.com/felixrieseberg/windows-build-tools/issues/56
+1 - if you still have any issues with python enviroment variables, check this thread: https://github.com/felixrieseberg/windows-build-tools/issues/56
 Also a good could be reseting ur config python variables at npm and reinstall everything. To reset python config:
 
 ```
 npm config set python ""
 ```
 
-If you are having issues with windows node modules. i,e, messages likes this in the console of electron app:
-
-check this project README. Most of time it is a problem due to different node versions between electron-rebuild node version and your systema node installed version. 
+2 - 2 - If you are having issues with windows node modules, check their project README. Most of time it is probably due to different node versions between electron-rebuild node version and your system node version.\
 https://github.com/electron/electron-rebuild
 
 TDLR: Try to update ur electron-rebuild package (npm install --save-dev electron-rebuild) or reinstall a diff node version. Remember to always execute 
@@ -75,32 +83,24 @@ TDLR: Try to update ur electron-rebuild package (npm install --save-dev electron
 ```
 before ```npm start```
 
-if you are having trouble with running node-gyp alone with a js file (node test.js) maybe your node-gyp variable path is not set properly.
-instead of using:
+2 - if you are having trouble with running node-gyp alone with a js file (node test.js) maybe your node-gyp variable path is not set properly.
+
+There is a couple of places where node-gyp might be installed, here are some:
+
 ```
 C:\Program Files\nodejs\node_modules\npm\node_modules\npm-lifecycle\node-gyp-bin;
-```
-use this in windows path enviroments
-```
 C:\Program Files\nodejs\node_modules\npm\bin\node-gyp-bin;
+C:\Users\USERNAME\AppData\Roaming\npm\node_modules\node-gyp\bin\node-gyp.js
+C:\Users\USERNAME\.electron-gyp\6.1.9\include\node
 ```
 
-# Notes
+The last one is the correct path including already the headers used for build. But for them to appear in the specified folder you should type `npm run electron-rebuild` first. This will execute `node-gyp configure & node-gyp build` using the lib version of electron set in the package.json.
 
-- if you are going to run a node file and you are not using the electron app (index.js), compile the binaries of the native modules using the code below
+## Packaging and Compiling own version
+
+Install electron-packager
 ```
-node-gyp configure
-node-gyp build
-```
-
-To change your resolution or the game resolution, you need to reconfigure the screen coordinates by clicking in the
-monitor button again.
-
-# Packaging and Compiling own version
-
-Install electron-packager. I built my version using NPM 5.4.1/5.6.0.
-```
-npm install electron-packager -g
+npm install -g electron-packager@14.2.1
 ```
 
 Go to source project folder and run:
@@ -124,4 +124,4 @@ electron-packager ./ BobitoBot --platform=win32 --arch=ia32 --asar --prune=true
 
 ## License
 
-[CC0 1.0 (Public Domain)](LICENSE.md)
+Copyright by dnovaes.
