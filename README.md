@@ -14,6 +14,7 @@ Virtual Assistant Application for a specific game (Tibia Platform) for Learning 
 App Requisites:
 - Windows ONLY
 - Client in Dx9 version
+- .Net Framework 4 (Client Profile + Extended?)
 
 # Installation
 
